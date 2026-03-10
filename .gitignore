@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Production
+dist/
+build/
+client/dist/
+
+# Environment Variables
+.env
+*.env
+*.local
+server/.env
+server/env_backup.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+server/*.db
+
+# Temporary Files
+out.txt
+tmp_pubhtml.html
+client/tmp_*.js
+server/tmp_*.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent Rules
+.antigravityrules
+.agents/
+.agent/
+_agents/
+_agent/

@@ -1,0 +1,13 @@
+{
+  "name": "sales-focus",
+  "version": "1.0.0",
+  "description": "Sales Focus - أداة المبيعات",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

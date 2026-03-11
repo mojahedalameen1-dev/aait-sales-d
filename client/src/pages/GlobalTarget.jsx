@@ -613,9 +613,9 @@ export default function GlobalTarget() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
                         {[
                             { icon: <Briefcase size={22} color="#4F8EF7" />, bg: isDark ? 'rgba(79,142,247,.1)' : '#EFF6FF', label: 'إجمالي العقود', val: allData.length, fmt: v => fmt(Math.round(v)) },
-                            { icon: <DollarSign size={22} color="#10B981" />, bg: isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5', label: 'مجموع المبالغ', val: totalGrossAmount, fmt: fmtSAR },
+                            { icon: <DollarSign size={22} color="#10B981" />, bg: isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5', label: 'مجموع المبالغ', val: totalAmount, fmt: fmtSAR },
                             { icon: <User size={22} color="#7C3AED" />, bg: isDark ? 'rgba(124,58,237,.1)' : '#F3E8FF', label: 'المندوبين النشطين', val: uniqueSales.length, fmt: v => fmt(Math.round(v)) },
-                            { icon: <TrendingUp size={22} color="#F59E0B" />, bg: isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7', label: 'متوسط قيمة العقد', val: allData.length ? totalGrossAmount / allData.length : 0, fmt: fmtSAR },
+                            { icon: <TrendingUp size={22} color="#F59E0B" />, bg: isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7', label: 'متوسط قيمة العقد', val: allData.length ? totalAmount / allData.length : 0, fmt: fmtSAR },
                         ].map((k, i) => (
                             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 24 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

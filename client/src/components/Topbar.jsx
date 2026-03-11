@@ -50,21 +50,7 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
   }, []);
 
   return (
-    <div
-      style={{
-        height: '64px',
-        borderBottom: `1px solid ${border}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 24px',
-        backgroundColor: isDark ? 'rgba(15, 22, 41, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(10px)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}
-    >
+    <div className="h-16 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-[#0F1629]/80 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300">
       <div className="flex items-center gap-2">
         {isMobile && (
           <button
@@ -84,33 +70,11 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
       <div className="flex items-center gap-4 relative">
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          style={{
-            position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F1F5F9',
-            border: `1px solid ${border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: textPrimary,
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-          onMouseOver={(e) => Object.assign(e.currentTarget.style, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' })}
-          onMouseOut={(e) => Object.assign(e.currentTarget.style, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F1F5F9' })}
+          className="relative w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-800 dark:text-slate-200 cursor-pointer transition-colors duration-200"
         >
           <Bell size={20} />
           {dueTodayDeals.length > 0 && (
-            <span style={{
-              position: 'absolute', top: '-2px', right: '-2px',
-              backgroundColor: '#EF4444', color: '#fff',
-              fontSize: '10px', fontWeight: 'bold',
-              minWidth: '16px', height: '16px', borderRadius: '8px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0 4px', border: `2px solid ${isDark ? '#0A0F1E' : '#FFFFFF'}`
-            }}>
+            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-[#0F1629]">
               {dueTodayDeals.length}
             </span>
           )}
@@ -124,34 +88,27 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
               style={{
-                position: 'absolute',
                 top: '52px',
-                left: 0, // In RTL context, "left" might mean standard left. Adjusting for layout.
+                left: 0,
                 width: isMobile ? 'calc(100vw - 48px)' : '320px',
-                maxWidth: '320px',
-                background: isDark ? '#19243E' : '#FFFFFF',
-                borderRadius: '16px',
-                boxShadow: isDark ? '0 10px 40px rgba(0,0,0,0.5)' : '0 10px 40px rgba(0,0,0,0.1)',
-                border: `1px solid ${border}`,
-                overflow: 'hidden',
-                zIndex: 100
               }}
+              className="absolute max-w-[320px] bg-white dark:bg-[#19243E] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-200 dark:border-white/5 overflow-hidden z-[100]"
             >
-              <div style={{ padding: '16px', borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '15px', fontWeight: 800, color: textPrimary, margin: 0 }}>الإشعارات والمتابعات</h4>
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}>
+              <div className="p-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center">
+                <h4 className="font-['IBM_Plex_Sans_Arabic'] text-[15px] font-extrabold text-slate-900 dark:text-slate-100 m-0">الإشعارات والمتابعات</h4>
+                <div className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full text-xs font-bold">
                   {dueTodayDeals.length} اليوم
                 </div>
               </div>
 
-              <div style={{ maxHeight: '350px', overflowY: 'auto', padding: '8px' }} className="custom-scrollbar">
+              <div className="max-h-[350px] overflow-y-auto p-2 custom-scrollbar">
                 {dueTodayDeals.length === 0 ? (
-                  <div style={{ padding: '32px 16px', textAlign: 'center', color: textMuted }}>
-                    <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFF', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <CheckCircle2 size={24} color="#10B981" />
+                  <div className="py-8 px-4 text-center text-slate-500 dark:text-slate-400">
+                    <div className="bg-slate-50 border border-slate-100 dark:bg-white/5 dark:border-white/5 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+                      <CheckCircle2 size={24} className="text-emerald-500" />
                     </div>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: textPrimary, margin: '0 0 4px 0' }}>لا توجد متابعات اليوم</p>
-                    <p style={{ fontSize: '12px', margin: 0 }}>أنت تسير بشكل ممتاز!</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">لا توجد متابعات اليوم</p>
+                    <p className="text-xs m-0">أنت تسير بشكل ممتاز!</p>
                   </div>
                 ) : (
                   dueTodayDeals.map(deal => (
@@ -161,22 +118,15 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
                         navigate('/pipeline');
                         setIsDropdownOpen(false);
                       }}
-                      style={{
-                        padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                        display: 'flex', gap: '12px', alignItems: 'flex-start',
-                        transition: 'background 0.2s',
-                        marginBottom: '4px'
-                      }}
-                      onMouseOver={(e) => Object.assign(e.currentTarget.style, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFF' })}
-                      onMouseOut={(e) => Object.assign(e.currentTarget.style, { backgroundColor: 'transparent' })}
+                      className="p-3 rounded-xl cursor-pointer flex gap-3 items-start transition-colors duration-200 hover:bg-slate-50 dark:hover:bg-white/5 mb-1 group"
                     >
-                      <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '8px', borderRadius: '50%', flexShrink: 0 }}>
+                      <div className="bg-red-500/10 text-red-500 p-2 rounded-full shrink-0 group-hover:bg-red-500/20 transition-colors">
                         <AlertCircle size={16} />
                       </div>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: textPrimary, marginBottom: '2px' }}>{deal.client_name}</div>
-                        <div style={{ fontSize: '12px', color: textSecondary, marginBottom: '4px' }}>يجب متابعة العميل اليوم!</div>
-                        <div style={{ fontSize: '11px', color: textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-0.5">{deal.client_name}</div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">يجب متابعة العميل اليوم!</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-500 flex items-center gap-1">
                           <Calendar size={10} /> {formatDate(deal.next_action_date)}
                         </div>
                       </div>
@@ -186,10 +136,10 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
               </div>
 
               {dueTodayDeals.length > 0 && (
-                <div style={{ padding: '12px', borderTop: `1px solid ${border}`, textAlign: 'center' }}>
+                <div className="p-3 border-t border-slate-200 dark:border-white/5 text-center">
                   <button
                     onClick={() => { navigate('/pipeline'); setIsDropdownOpen(false); }}
-                    style={{ background: 'transparent', border: 'none', color: '#4F8EF7', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                    className="bg-transparent border-none text-blue-500 hover:text-blue-600 dark:text-[#4F8EF7] dark:hover:text-[#7C3AED] text-[13px] font-bold cursor-pointer transition-colors"
                   >
                     عرض كل الصفقات في بورد التقفيل &larr;
                   </button>

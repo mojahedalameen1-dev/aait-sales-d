@@ -39,41 +39,49 @@ export default function App() {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
       if (mobile) setIsCollapsed(true);
+      // We will handle padding mostly via tailwind classes now, but keep state for specific overrides if needed
       setMainPadding(window.innerWidth < 768 ? '16px' : '32px');
     };
+    // initial check
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const sidebarWidth = isCollapsed ? '80px' : '280px';
+  const isPrint = location.pathname.includes('/print');
 
   return (
     <ThemeProvider>
       <ToastProvider>
-        <div id="app-layout-wrapper" style={{ display: 'flex', direction: 'rtl', minHeight: '100vh', background: 'var(--bg-main)' }}>
-          <div className="print:hidden" id="app-shell-sidebar">
-            <Sidebar
-              isCollapsed={isCollapsed}
-              setIsCollapsed={setIsCollapsed}
-              isMobile={isMobile}
-              isMobileOpen={isMobileOpen}
-              setIsMobileOpen={setIsMobileOpen}
-            />
-          </div>
+        <div id="app-layout-wrapper" className="flex flex-col lg:flex-row min-h-screen bg-[var(--bg-main)] text-slate-800 dark:text-slate-200" style={{ direction: 'rtl', fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+          
+          {/* Sidebar Area */}
+          {!isPrint && (
+            <div className="print:hidden z-50">
+              <Sidebar
+                isCollapsed={isCollapsed}
+                setIsCollapsed={setIsCollapsed}
+                isMobile={isMobile}
+                isMobileOpen={isMobileOpen}
+                setIsMobileOpen={setIsMobileOpen}
+              />
+            </div>
+          )}
+
+          {/* Main Content Area */}
           <main
-            className="main-content print:m-0 print:p-0 print:w-full flex-col flex"
+            className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isPrint ? 'm-0 p-0 w-full' : ''}`}
             style={{
-              marginRight: location.pathname.includes('/print') ? 0 : (isMobile ? 0 : sidebarWidth),
-              flex: 1,
-              width: isMobile ? '100%' : `calc(100% - ${sidebarWidth})`,
-              minHeight: '100vh',
-              transition: 'margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              // Apply margin on desktop matching sidebar width so content doesn't slip under it
+              marginRight: isPrint ? 0 : (isMobile ? 0 : sidebarWidth)
             }}
           >
             {/* Topbar visible except on print pages */}
-            {!location.pathname.includes('/print') && <Topbar isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />}
+            {!isPrint && <Topbar isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />}
 
-            <div style={{ padding: location.pathname.includes('/print') ? 0 : mainPadding, flex: 1 }}>
+            {/* Dynamic Padding Container */}
+            <div className={`flex-1 ${isPrint ? 'p-0' : 'p-4 md:p-6 lg:p-8'}`}>
               <AnimatePresence mode="wait">
                 <Routes location={location} key={location.pathname}>
                   <Route path="/" element={<PageWrapper><Dashboard /></PageWrapper>} />

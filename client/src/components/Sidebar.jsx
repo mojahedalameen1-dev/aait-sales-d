@@ -74,83 +74,39 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 90, backdropFilter: 'blur(4px)'
-            }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[90]"
           />
         )}
       </AnimatePresence>
       <aside
+        className={`fixed right-0 top-0 bottom-0 z-[100] flex flex-col bg-white dark:bg-[#0F1629] border-l border-slate-200 dark:border-white/5 transition-all duration-300 ease-in-out`}
         style={{
           width: sidebarWidth,
-          minHeight: '100vh',
-          background: bg,
-          borderLeft: `1px solid ${borderColor}`,
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          right: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 100,
           transform,
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s, border-color 0.3s',
-          overflow: 'hidden'
         }}
       >
         {/* Toggle Button */}
         {!isMobile && (
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            style={{
-              position: 'absolute',
-              top: '32px',
-              left: actualCollapsed ? '20px' : '20px',
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
-              background: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-              border: 'none',
-              color: textPrimary,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 10,
-              transition: 'all 0.2s'
-            }}
+            className="absolute top-8 left-4 w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200 transition-colors z-10"
           >
             {actualCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
         )}
 
         {/* Logo */}
-        <div style={{ padding: actualCollapsed ? '32px 16px 24px' : '32px 24px 24px', transition: 'padding 0.3s' }}>
-          <motion.div
-            style={{ display: 'flex', alignItems: 'center', gap: '14px', direction: 'rtl' }}
-          >
-            <div
-              style={{
-                width: '48px', height: '48px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #4F8EF7 0%, #7C3AED 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(79,142,247,0.3)',
-                flexShrink: 0,
-              }}
-            >
+        <div className={`transition-all duration-300 ${actualCollapsed ? 'pt-8 pb-6 px-4' : 'pt-8 pb-6 px-6'}`}>
+          <motion.div className="flex items-center gap-3.5 rtl">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] flex items-center justify-center shadow-lg shadow-[#4F8EF7]/30 shrink-0">
               <Zap size={24} color="white" fill="white" />
             </div>
             {!actualCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-              >
-                <div style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '20px', fontWeight: 800, color: textPrimary, letterSpacing: '-0.5px', whiteSpace: 'nowrap' }}>
+              <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                <div className="font-['IBM_Plex_Sans_Arabic'] text-xl font-extrabold text-slate-900 dark:text-white tracking-tight whitespace-nowrap">
                   Sales Focus
                 </div>
-                <div style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '12px', color: textMuted, marginTop: '1px', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                <div className="font-['IBM_Plex_Sans_Arabic'] text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap mt-0.5">
                   أداة المبيعات الذكية
                 </div>
               </motion.div>
@@ -159,57 +115,29 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
         </div>
 
         {/* Navigation */}
-        <nav style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon, exact }) => {
             const isActive = exact ? location.pathname === to : location.pathname.startsWith(to) && to !== '/';
 
             return (
-              <NavLink
-                key={to}
-                to={to}
-                className="no-underline"
-                style={{ position: 'relative', display: 'block' }}
-              >
+              <NavLink key={to} to={to} className="relative block group">
                 <motion.div
                   onClick={() => { if (isMobile) setIsMobileOpen(false); }}
                   whileHover={{ x: actualCollapsed ? 0 : -4 }}
                   whileTap={{ scale: 0.98 }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '13px 16px',
-                    borderRadius: '14px',
-                    direction: 'rtl',
-                    fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-                    fontSize: '15px',
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? '#FFFFFF' : (isDark ? '#8B9CC8' : '#4A5570'),
-                    transition: 'color 0.3s, padding 0.3s',
-                    zIndex: 2,
-                    position: 'relative',
-                    justifyContent: actualCollapsed ? 'center' : 'flex-start'
-                  }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-[14px] direction-rtl font-['IBM_Plex_Sans_Arabic'] text-[15px] transition-all duration-300 relative z-10 ${isActive ? 'font-semibold text-white' : 'font-medium text-slate-600 dark:text-slate-400 group-hover:bg-slate-50 dark:group-hover:bg-white/5'} ${actualCollapsed ? 'justify-center' : 'justify-start'}`}
                 >
-                  <Icon size={20} style={{ opacity: isActive ? 1 : 0.7, flexShrink: 0 }} />
+                  <Icon size={20} className={`shrink-0 ${isActive ? 'opacity-100' : 'opacity-70'}`} />
                   {!actualCollapsed && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <motion.span
-                        initial={{ opacity: 0, x: 5 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
+                    <div className="flex items-center justify-between w-full">
+                      <motion.span initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap">
                         {label}
                       </motion.span>
 
                       {to === '/pipeline' && overdueDealsCount > 0 && (
                         <motion.div
                           initial={{ scale: 0 }} animate={{ scale: 1 }}
-                          style={{
-                            background: '#EF4444', color: 'white', fontSize: '11px', fontWeight: 'bold',
-                            padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 2px 5px rgba(239, 68, 68, 0.4)'
-                          }}
+                          className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center justify-center shadow-[0_2px_5px_rgba(239,68,68,0.4)]"
                           title="صفقات متأخرة يجب متابعتها"
                         >
                           {overdueDealsCount}
@@ -221,10 +149,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
                   {isCollapsed && to === '/pipeline' && overdueDealsCount > 0 && (
                     <motion.div
                       initial={{ scale: 0 }} animate={{ scale: 1 }}
-                      style={{
-                        position: 'absolute', top: '8px', right: '8px', width: '10px', height: '10px',
-                        background: '#EF4444', borderRadius: '50%', border: `2px solid ${isDark ? '#0A0F1E' : '#FFFFFF'}`
-                      }}
+                      className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0F1629]"
                       title={`${overdueDealsCount} صفقات متأخرة`}
                     />
                   )}
@@ -232,14 +157,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
                   {isActive && (
                     <motion.div
                       layoutId="activeNav"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(135deg, #4F8EF7 0%, #7C3AED 100%)',
-                        borderRadius: '14px',
-                        zIndex: -1,
-                        boxShadow: '0 4px 15px rgba(79,142,247,0.35)',
-                      }}
+                      className="absolute inset-0 bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] rounded-[14px] -z-10 shadow-[0_4px_15px_rgba(79,142,247,0.35)]"
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
@@ -250,22 +168,10 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
         </nav>
 
         {/* Theme Toggle */}
-        <div style={{ padding: isCollapsed ? '16px' : '24px', borderTop: `1px solid ${borderColor}`, transition: 'padding 0.3s' }}>
+        <div className={`transition-all duration-300 border-t border-slate-200 dark:border-white/5 ${actualCollapsed ? 'p-4' : 'p-6'}`}>
           <button
             onClick={toggleTheme}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              background: isDark ? 'rgba(15, 23, 42, 0.6)' : '#F1F5F9',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}`,
-              borderRadius: '50px',
-              padding: '4px',
-              cursor: 'pointer',
-              position: 'relative',
-              height: '44px',
-              overflow: 'hidden'
-            }}
+            className="w-full flex items-center bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 rounded-full p-1 cursor-pointer relative h-11 overflow-hidden"
           >
             {/* Background Slider */}
             <motion.div
@@ -275,36 +181,24 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
                 width: actualCollapsed ? '100%' : '50%'
               }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              style={{
-                position: 'absolute',
-                height: 'calc(100% - 8px)',
-                background: 'linear-gradient(135deg, #4F8EF7, #7C3AED)',
-                borderRadius: '50px',
-                right: '4px',
-                zIndex: 0
-              }}
+              className="absolute h-[calc(100%-8px)] bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] rounded-full right-1 z-0 shadow-sm"
             />
 
             {actualCollapsed ? (
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'center', zIndex: 1 }}>
-                <motion.span
-                  initial={false}
-                  animate={{ rotate: isDark ? 360 : 0 }}
-                  transition={{ duration: 0.5 }}
-                  style={{ fontSize: '18px' }}
-                >
+              <div className="w-full flex justify-center z-10">
+                <motion.span initial={false} animate={{ rotate: isDark ? 360 : 0 }} transition={{ duration: 0.5 }} className="text-lg">
                   {isDark ? '🌙' : '☀️'}
                 </motion.span>
               </div>
             ) : (
-              <div style={{ display: 'flex', width: '100%', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: isDark ? '#fff' : textMuted, padding: '6px 0', transition: 'color 0.3s' }}>
-                  <span style={{ fontSize: '14px' }}>🌙</span>
-                  <span style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '13px', fontWeight: 600 }}>مظلم</span>
+              <div className="flex w-full relative z-10">
+                <div className={`flex-1 flex items-center justify-center gap-2 py-1.5 transition-colors duration-300 ${isDark ? 'text-white' : 'text-slate-500'}`}>
+                  <span className="text-sm">🌙</span>
+                  <span className="font-['IBM_Plex_Sans_Arabic'] text-[13px] font-semibold">مظلم</span>
                 </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: !isDark ? '#fff' : textMuted, padding: '6px 0', transition: 'color 0.3s' }}>
-                  <span style={{ fontSize: '14px' }}>☀️</span>
-                  <span style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '13px', fontWeight: 600 }}>مضيء</span>
+                <div className={`flex-1 flex items-center justify-center gap-2 py-1.5 transition-colors duration-300 ${!isDark ? 'text-white' : 'text-slate-500'}`}>
+                  <span className="text-sm">☀️</span>
+                  <span className="font-['IBM_Plex_Sans_Arabic'] text-[13px] font-semibold">مضيء</span>
                 </div>
               </div>
             )}

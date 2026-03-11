@@ -495,7 +495,7 @@ export default function GlobalTarget() {
     );
 
     return (
-        <div style={{ padding: '28px', direction: 'rtl', minHeight: '100vh', background: C.bg, fontFamily: FONT, color: C.text }}>
+        <div className="p-4 md:p-7 min-h-screen bg-white dark:bg-[#080E1B] font-['IBM_Plex_Sans_Arabic'] text-slate-900 dark:text-[#F0F4FF] direction-rtl">
             {achievementPct >= 100 && <Confetti />}
 
             {selectedRep && (
@@ -503,20 +503,18 @@ export default function GlobalTarget() {
             )}
 
             {/* ── HEADER ── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ background: C.glow, padding: '10px', borderRadius: 14, display: 'inline-flex' }}><Target size={30} color="#7C3AED" /></span>
+                    <h1 className="text-2xl md:text-3xl font-extrabold m-0 flex items-center gap-3">
+                        <span className="bg-blue-500/10 dark:bg-[#4F8EF7]/10 p-2.5 rounded-2xl inline-flex"><Target size={30} className="text-[#7C3AED]" /></span>
                         التارقت العام للشركة
                     </h1>
-                    <p style={{ color: C.muted, marginTop: 8, fontSize: 15 }}>الهدف المالي والمنافسة الإجمالية — الهدف الشهري: <strong style={{ color: '#7C3AED' }}>575,000 ر.س</strong></p>
+                    <p className="text-slate-500 dark:text-[#7A869A] mt-2 text-sm md:text-[15px]">الهدف المالي والمنافسة الإجمالية — الهدف الشهري: <strong className="text-[#7C3AED]">575,000 ر.س</strong></p>
                 </div>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button onClick={() => fetchSheet(activeGid)} disabled={refreshing} style={{
-                        display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg, #4F8EF7, #7C3AED)', color: 'white',
-                        padding: '11px 22px', borderRadius: 12, border: 'none', cursor: refreshing ? 'not-allowed' : 'pointer',
-                        fontWeight: 700, fontSize: 15, boxShadow: isDark ? '0 6px 20px rgba(79,142,247,.3)' : '0 4px 14px rgba(79,142,247,.4)', opacity: refreshing ? .7 : 1, fontFamily: FONT, transition: 'opacity .2s'
-                    }}>
+                <div className="flex gap-3 flex-wrap items-center w-full md:w-auto">
+                    <button onClick={() => fetchSheet(activeGid)} disabled={refreshing} 
+                        className={`flex items-center justify-center gap-2 bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] text-white px-5 py-2.5 rounded-xl border-none font-bold text-[15px] shadow-[0_4px_14px_rgba(79,142,247,0.4)] dark:shadow-[0_6px_20px_rgba(79,142,247,0.3)] transition-all w-full md:w-auto ${refreshing ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'}`}
+                    >
                         <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ repeat: refreshing ? Infinity : 0, duration: 1 }}><RefreshCw size={17} /></motion.div>
                         تحديث البيانات
                     </button>
@@ -524,54 +522,49 @@ export default function GlobalTarget() {
             </div>
 
             {/* ── SHEET TABS ── */}
-            <div style={{ display: 'flex', overflowX: 'auto', gap: 10, paddingBottom: 16, marginBottom: 28, scrollbarWidth: 'none' }}>
+            <div className="flex overflow-x-auto gap-2.5 pb-4 mb-7 custom-scrollbar">
                 {sheets.map(s => {
                     const active = activeGid === s.gid;
                     return (
-                        <button key={s.gid} onClick={() => setActiveGid(s.gid)} style={{
-                            padding: '10px 18px', borderRadius: 12, whiteSpace: 'nowrap',
-                            background: active ? (isDark ? 'rgba(79,142,247,.12)' : '#EFF6FF') : C.card,
-                            border: `1px solid ${active ? '#4F8EF7' : C.border}`,
-                            color: active ? '#4F8EF7' : C.muted,
-                            fontWeight: active ? 700 : 500, cursor: 'pointer', fontFamily: FONT, fontSize: 14, transition: 'all .2s',
-                            boxShadow: active ? '0 4px 12px rgba(79,142,247,.1)' : 'none'
-                        }}>{s.name}</button>
+                        <button key={s.gid} onClick={() => setActiveGid(s.gid)}
+                            className={`px-4 py-2.5 rounded-xl whitespace-nowrap text-sm transition-all border outline-none cursor-pointer ${
+                                active
+                                ? 'bg-blue-50 dark:bg-[#4F8EF7]/10 border-[#4F8EF7] text-[#4F8EF7] font-bold shadow-[0_4px_12px_rgba(79,142,247,0.1)]'
+                                : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-200 dark:hover:bg-white/10'
+                            }`}
+                        >
+                            {s.name}
+                        </button>
                     );
                 })}
             </div>
-
-            {error && (
-                <div style={{ background: isDark ? 'rgba(239,68,68,.1)' : '#FEF2F2', border: `1px solid ${isDark ? 'rgba(239,68,68,.3)' : '#FECACA'}`, color: '#EF4444', padding: '16px 24px', borderRadius: 16, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <AlertCircle size={22} /> <span style={{ fontWeight: 600 }}>{error}</span>
-                </div>
-            )}
 
             <AnimatePresence mode="wait">
                 <motion.div key={activeGid} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .4 }}>
 
                     {/* ── ALERTS ROW ── */}
-                    <div style={{ display: 'flex', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
-                        <div style={{ flex: 2, minWidth: 300, background: 'linear-gradient(135deg, #4F8EF7, #7C3AED)', borderRadius: 20, padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 20, color: 'white', position: 'relative', overflow: 'hidden' }}>
-                            <div style={{ position: 'absolute', right: -10, top: -10, opacity: 0.1 }}><Target size={120} /></div>
-                            <div style={{ zIndex: 1, width: '100%' }}>
-                                <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.4 }}>{motivationalPhrase}</div>
+                    <div className="flex flex-col lg:flex-row gap-4 mb-7">
+                        <div className="flex-1 lg:flex-[2] min-w-[300px] bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] rounded-3xl p-6 md:p-8 flex items-center justify-center text-center gap-5 text-white relative overflow-hidden shadow-lg">
+                            <div className="absolute -right-4 -top-4 opacity-10"><Target size={120} /></div>
+                            <div className="relative z-10 w-full">
+                                <div className="text-2xl md:text-3xl font-black leading-relaxed">{motivationalPhrase}</div>
                             </div>
                         </div>
 
                         {isCurrentMonth && forecast && (
-                            <div style={{ flex: 1, minWidth: 300, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 20, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                                    <div style={{ width: 44, height: 44, borderRadius: 14, background: forecast.projected >= GLOBAL_TARGET ? (isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5') : (isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <Clock size={22} color={forecast.projected >= GLOBAL_TARGET ? '#10B981' : '#F59E0B'} />
+                            <div className="flex-1 min-w-[300px] bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-6 flex flex-col justify-center shadow-sm">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${forecast.projected >= GLOBAL_TARGET ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-amber-50 dark:bg-amber-500/10'}`}>
+                                        <Clock size={22} className={forecast.projected >= GLOBAL_TARGET ? 'text-emerald-500' : 'text-amber-500'} />
                                     </div>
                                     <div>
-                                        <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0', color: C.text }}>التوقع الذكي لنهاية الشهر</h3>
-                                        <div style={{ fontSize: 22, fontWeight: 900, color: forecast.projected >= GLOBAL_TARGET ? '#10B981' : '#F59E0B', marginTop: 2 }}>
+                                        <h3 className="text-[15px] font-bold m-0 text-slate-900 dark:text-white">التوقع الذكي لنهاية الشهر</h3>
+                                        <div className={`text-2xl font-black mt-0.5 ${forecast.projected >= GLOBAL_TARGET ? 'text-emerald-500' : 'text-amber-500'}`}>
                                             <AnimatedNumber target={forecast.projected} formatter={fmtSAR} />
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', padding: 12, borderRadius: 10 }}>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-100 dark:border-white/5">
                                     {forecast.usedHistorical ? (
                                         <>بناءً على <b>{forecast.daysElapsed}</b> يوم من أصل <b>{forecast.daysInMonth}</b> يوم — مستند على بيانات <b>{forecast.pastMonthsNames}</b>.</>
                                     ) : forecast.daysElapsed >= 7 ? (
@@ -585,85 +578,86 @@ export default function GlobalTarget() {
                     </div>
 
                     {/* ── HERO TARGET CARD ── */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 32, marginBottom: 28, boxShadow: isDark ? 'none' : '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+                    <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-6 md:p-8 mb-7 shadow-sm">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
                             <div>
-                                <div style={{ color: C.muted, fontSize: 15, marginBottom: 6 }}>الهدف الشهري الإجمالي</div>
-                                <div style={{ fontSize: 44, fontWeight: 900, letterSpacing: '-1px', color: C.text }}>
+                                <div className="text-slate-500 dark:text-[#7A869A] text-[15px] mb-1.5 font-medium">الهدف الشهري الإجمالي</div>
+                                <div className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
                                     <AnimatedNumber target={totalAmount} formatter={fmtSAR} />
                                 </div>
-                                <div style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>
-                                    من أصل <span style={{ color: '#7C3AED', fontWeight: 700 }}>{fmt(GLOBAL_TARGET)}</span> • {momHtml}
+                                <div className="text-slate-500 dark:text-[#7A869A] text-sm mt-1 font-medium">
+                                    من أصل <span className="text-[#7C3AED] font-bold">{fmt(GLOBAL_TARGET)}</span> • {momHtml}
                                 </div>
                             </div>
-                            <div style={{ textAlign: 'center', background: isDark ? 'rgba(255,255,255,.02)' : '#F8FAFC', padding: '16px 32px', borderRadius: 20, border: `1px solid ${C.border}` }}>
-                                <div style={{ fontSize: 48, fontWeight: 900, color: achievementPct >= 100 ? '#10B981' : achievementPct >= 60 ? '#F59E0B' : '#EF4444' }}>
-                                    <AnimatedNumber target={achievementPct} formatter={v => fmtPct(v)} />
+                            <div className="flex gap-4 lg:gap-6 items-center bg-slate-50 dark:bg-white/5 p-4 md:py-4 md:px-8 rounded-2xl border border-slate-200 dark:border-white/5 w-full lg:w-auto justify-between lg:justify-start">
+                                <div className="text-center">
+                                    <div className={`text-4xl md:text-[48px] font-black ${achievementPct >= 100 ? 'text-emerald-500' : achievementPct >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                                        <AnimatedNumber target={achievementPct} formatter={v => fmtPct(v)} />
+                                    </div>
+                                    <div className="text-slate-500 dark:text-[#7A869A] text-sm font-bold">نسبة الإنجاز</div>
                                 </div>
-                                <div style={{ color: C.muted, fontSize: 14, fontWeight: 600 }}>نسبة الإنجاز</div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: 32, fontWeight: 800, color: remaining === 0 ? '#10B981' : C.text }}>
-                                    <AnimatedNumber target={remaining} formatter={fmtSAR} />
+                                <div className="w-px h-16 bg-slate-200 dark:bg-white/10 hidden md:block"></div>
+                                <div className="text-center">
+                                    <div className={`text-3xl md:text-[32px] font-extrabold ${remaining === 0 ? 'text-emerald-500' : 'text-slate-900 dark:text-white'}`}>
+                                        <AnimatedNumber target={remaining} formatter={fmtSAR} />
+                                    </div>
+                                    <div className="text-slate-500 dark:text-[#7A869A] text-sm font-medium">المتبقي لإكمال الهدف</div>
                                 </div>
-                                <div style={{ color: C.muted, fontSize: 14 }}>المتبقي لإكمال الهدف</div>
                             </div>
                         </div>
                         <ProgressBar pct={achievementPct} height={16} bg={isDark ? 'rgba(255,255,255,.06)' : '#E2E8F0'} />
                     </div>
 
                     {/* ── KPI MINI-CARDS ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
                         {[
-                            { icon: <DollarSign size={22} color="#10B981" />, bg: isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5', label: 'صافي المبيعات', val: totalAmount, fmt: fmtSAR },
-                            { icon: <TrendingUp size={22} color="#F59E0B" />, bg: isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7', label: 'المبيعات الشاملة (للفرق)', val: totalGrossAmount, fmt: fmtSAR },
-                            { icon: <Briefcase size={22} color="#4F8EF7" />, bg: isDark ? 'rgba(79,142,247,.1)' : '#EFF6FF', label: 'إجمالي العقود', val: allData.length, fmt: v => fmt(Math.round(v)) },
-                            { icon: <User size={22} color="#7C3AED" />, bg: isDark ? 'rgba(124,58,237,.1)' : '#F3E8FF', label: 'المندوبين النشطين', val: uniqueSales.length, fmt: v => fmt(Math.round(v)) },
+                            { icon: <DollarSign size={22} className="text-emerald-500" />, bgClass: 'bg-emerald-50 dark:bg-emerald-500/10', label: 'صافي المبيعات', val: totalAmount, fmt: fmtSAR },
+                            { icon: <TrendingUp size={22} className="text-amber-500" />, bgClass: 'bg-amber-50 dark:bg-amber-500/10', label: 'المبيعات الشاملة (للفرق)', val: totalGrossAmount, fmt: fmtSAR },
+                            { icon: <Briefcase size={22} className="text-blue-500" />, bgClass: 'bg-blue-50 dark:bg-blue-500/10', label: 'إجمالي العقود', val: allData.length, fmt: v => fmt(Math.round(v)) },
+                            { icon: <User size={22} className="text-purple-500" />, bgClass: 'bg-purple-50 dark:bg-purple-500/10', label: 'المندوبين النشطين', val: uniqueSales.length, fmt: v => fmt(Math.round(v)) },
                         ].map((k, i) => (
-                            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 24 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                    <div style={{ width: 48, height: 48, borderRadius: 14, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{k.icon}</div>
+                            <div key={i} className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm hover:-translate-y-1 transition-transform">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center shrink-0 ${k.bgClass}`}>{k.icon}</div>
                                     <div>
-                                        <div style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>{k.label}</div>
-                                        <div style={{ fontSize: 24, fontWeight: 800 }}><AnimatedNumber target={k.val} formatter={k.fmt} /></div>
+                                        <div className="text-slate-500 dark:text-[#7A869A] text-[13px] mb-1 font-medium">{k.label}</div>
+                                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white"><AnimatedNumber target={k.val} formatter={k.fmt} /></div>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-
-                    {/* ── ROW: LEADERBOARD & HEATMAP ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20, marginBottom: 28 }}>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-7">
                         {/* Leaderboards Column */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        <div className="flex flex-col gap-5">
                             {/* BDR Leaderboard */}
-                            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 28, flex: 1 }}>
-                                <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <Trophy size={22} color="#F59E0B" /> مبيعات مطوري الأعمال
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, marginRight: 'auto', background: isDark ? 'rgba(255,255,255,.05)' : '#F1F5F9', padding: '4px 10px', borderRadius: 8 }}>الهدف الفردي: 115k</span>
+                            <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-7 shadow-sm">
+                                <h3 className="text-xl font-extrabold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+                                    <Trophy size={22} className="text-amber-500" /> مبيعات مطوري الأعمال
+                                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-auto bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-lg">الهدف الفردي: 115k</span>
                                 </h3>
-                                {bdrLeaderboard.length === 0 ? <p style={{ color: C.muted, textAlign: 'center' }}>لا توجد عقود بعد</p> : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {bdrLeaderboard.length === 0 ? <p className="text-slate-400 text-center">لا توجد عقود بعد</p> : (
+                                    <div className="flex flex-col gap-4">
                                         {bdrLeaderboard.map((rep, i) => {
                                             const activeDaysLeft = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate();
                                             const pct = (rep.total / REP_TARGET) * 100;
                                             const needsAlert = isCurrentMonth && activeDaysLeft <= 10 && pct < 40;
                                             const hitTarget = pct >= 100;
                                             return (
-                                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                                    <div style={{ fontSize: 26, width: 32, textAlign: 'center', flexShrink: 0 }}>{MEDAL[i] || <span style={{ fontSize: 16, color: C.muted, fontWeight: 800 }}>{i + 1}</span>}</div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                <button onClick={() => setSelectedRep(rep.name)} style={{ background: 'none', border: 'none', padding: 0, margin: 0, fontWeight: 700, fontSize: 16, color: C.text, cursor: 'pointer', fontFamily: FONT, textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'textDecorationColor .2s' }} onMouseEnter={e => e.currentTarget.style.textDecorationColor = C.text} onMouseLeave={e => e.currentTarget.style.textDecorationColor = 'transparent'}>{rep.name}</button>
-                                                                {hitTarget && <span title="حقق الهدف" style={{ fontSize: 16 }}>🎯</span>}
+                                                <div key={i} className="flex items-center gap-4">
+                                                    <div className="text-2xl w-8 text-center shrink-0">{MEDAL[i] || <span className="text-base text-slate-400 dark:text-slate-500 font-extrabold">{i + 1}</span>}</div>
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start mb-2 flex-wrap gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => setSelectedRep(rep.name)} className="bg-transparent border-none p-0 m-0 font-bold text-base text-slate-900 dark:text-white cursor-pointer hover:underline transition-all">{rep.name}</button>
+                                                                {hitTarget && <span title="حقق الهدف">🎯</span>}
                                                             </div>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                                                                <span style={{ fontSize: 15, color: hitTarget ? '#10B981' : C.text, fontWeight: 700 }}>
-                                                                    {fmtSAR(rep.total)} <span style={{ fontSize: 13, opacity: .7 }}>({fmtPct(pct)})</span>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <span className={`text-[15px] font-bold ${hitTarget ? 'text-emerald-500' : 'text-slate-900 dark:text-white'}`}>
+                                                                    {fmtSAR(rep.total)} <span className="text-[13px] opacity-70">({fmtPct(pct)})</span>
                                                                 </span>
                                                                 {needsAlert && (
-                                                                    <span style={{ fontSize: 11, background: isDark ? 'rgba(239,68,68,.1)' : '#FEF2F2', color: '#EF4444', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>
+                                                                    <span className="text-[11px] bg-red-50 dark:bg-red-500/10 text-red-500 px-2 py-0.5 rounded-md font-semibold">
                                                                         ⚠️ يحتاج {fmt(REP_TARGET - rep.total)} في {activeDaysLeft} يوم
                                                                     </span>
                                                                 )}
@@ -679,27 +673,21 @@ export default function GlobalTarget() {
                             </div>
 
                             {/* Teams Leaderboard */}
-                            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 28, flex: 1 }}>
-                                <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <User size={22} color="#7C3AED" /> مبيعات الفِرق
+                            <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-7 shadow-sm">
+                                <h3 className="text-xl font-extrabold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+                                    <User size={22} className="text-purple-500" /> مبيعات الفِرَق
                                 </h3>
-                                {teamLeaderboard.length === 0 ? <p style={{ color: C.muted, textAlign: 'center' }}>لا توجد عقود لفرق المبيعات</p> : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {teamLeaderboard.length === 0 ? <p className="text-slate-400 text-center">لا توجد عقود لفرق المبيعات</p> : (
+                                    <div className="flex flex-col gap-4">
                                         {teamLeaderboard.map((rep, i) => {
                                             const pct = (rep.total / (REP_TARGET * 3)) * 100;
                                             return (
-                                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                                    <div style={{ fontSize: 26, width: 32, textAlign: 'center', flexShrink: 0 }}>{MEDAL[i] || <span style={{ fontSize: 16, color: C.muted, fontWeight: 800 }}>{i + 1}</span>}</div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, flexWrap: 'wrap' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                <button onClick={() => setSelectedRep(rep.name)} style={{ background: 'none', border: 'none', padding: 0, margin: 0, fontWeight: 700, fontSize: 16, color: C.text, cursor: 'pointer', fontFamily: FONT, textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'textDecorationColor .2s' }} onMouseEnter={e => e.currentTarget.style.textDecorationColor = C.text} onMouseLeave={e => e.currentTarget.style.textDecorationColor = 'transparent'}>{rep.name}</button>
-                                                            </div>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                                                                <span style={{ fontSize: 15, color: C.text, fontWeight: 700 }}>
-                                                                    {fmtSAR(rep.total)}
-                                                                </span>
-                                                            </div>
+                                                <div key={i} className="flex items-center gap-4">
+                                                    <div className="text-2xl w-8 text-center shrink-0">{MEDAL[i] || <span className="text-base text-slate-400 dark:text-slate-500 font-extrabold">{i + 1}</span>}</div>
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-center mb-2 flex-wrap gap-1">
+                                                            <button onClick={() => setSelectedRep(rep.name)} className="bg-transparent border-none p-0 m-0 font-bold text-base text-slate-900 dark:text-white cursor-pointer hover:underline">{rep.name}</button>
+                                                            <span className="text-[15px] font-bold text-slate-900 dark:text-white">{fmtSAR(rep.total)}</span>
                                                         </div>
                                                         <ProgressBar pct={Math.min(pct, 100)} height={8} bg={isDark ? 'rgba(255,255,255,.05)' : '#E2E8F0'} />
                                                     </div>
@@ -712,79 +700,82 @@ export default function GlobalTarget() {
                         </div>
 
                         {/* Mixed Column: Chart + Fastest Deals */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 24, flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                    <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><TrendingUp size={20} color="#10B981" /> مسار تحقيق الهدف - {activeSheetDef?.name}</h3>
-                                </div>
+                        <div className="flex flex-col gap-5">
+                            <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm flex-1">
+                                <h3 className="text-lg font-extrabold mb-5 flex items-center gap-2 text-slate-900 dark:text-white">
+                                    <TrendingUp size={20} className="text-emerald-500" /> مسار تحقيق الهدف - {activeSheetDef?.name}
+                                </h3>
                                 <PerformanceProgressChart currentData={allData} allMonthsData={sheets.map(s => ({ name: s.name, data: historicData[s.gid] || [] }))} totalTarget={GLOBAL_TARGET} isDark={isDark} activeSheetName={activeSheetDef?.name} />
                             </div>
-                            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 24, flex: 1 }}>
+                            <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm flex-1">
                                 <BestDayWidget data={allData} isDark={isDark} />
-                                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color="#F59E0B" /> أسرع العقود إغلاقاً</h3>
+                                <h3 className="text-lg font-extrabold mb-5 flex items-center gap-2 text-slate-900 dark:text-white">
+                                    <Clock size={20} className="text-amber-500" /> أسرع العقود إغلاقاً
+                                </h3>
                                 <FastestDeals data={allData} isDark={isDark} />
                             </div>
                         </div>
                     </div>
 
+
                     {/* ── ANALYTICS ROW ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20, marginBottom: 28 }}>
-                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 28 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><FileText size={20} color="#4F8EF7" /> تحليل المصادر</h3>
-                                <div style={{ display: 'flex', background: isDark ? 'rgba(255,255,255,.05)' : '#F1F5F9', borderRadius: 8, padding: 4 }}>
-                                    <button onClick={() => setSourceMode('value')} style={{ background: sourceMode === 'value' ? '#4F8EF7' : 'transparent', color: sourceMode === 'value' ? 'white' : C.muted, border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>قيمة</button>
-                                    <button onClick={() => setSourceMode('count')} style={{ background: sourceMode === 'count' ? '#4F8EF7' : 'transparent', color: sourceMode === 'count' ? 'white' : C.muted, border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>عدد</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-7">
+                        <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-7 shadow-sm">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-extrabold m-0 flex items-center gap-2 text-slate-900 dark:text-white"><FileText size={20} className="text-blue-500" /> تحليل المصادر</h3>
+                                <div className="flex bg-slate-100 dark:bg-white/5 rounded-lg p-1">
+                                    <button onClick={() => setSourceMode('value')} className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${sourceMode === 'value' ? 'bg-[#4F8EF7] text-white' : 'bg-transparent text-slate-500 dark:text-slate-400'}`}>قيمة</button>
+                                    <button onClick={() => setSourceMode('count')} className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer border-none transition-all ${sourceMode === 'count' ? 'bg-[#4F8EF7] text-white' : 'bg-transparent text-slate-500 dark:text-slate-400'}`}>عدد</button>
                                 </div>
                             </div>
                             {chartData.sources.length > 0
                                 ? (
                                     <>
                                         <DonutChart data={chartData.sources} colors={donutColors} isDark={isDark} />
-                                        {sourceMode === 'value' && chartData.insight && <div style={{ marginTop: 20, padding: 12, background: isDark ? 'rgba(79,142,247,.05)' : '#EFF6FF', borderRadius: 8, color: isDark ? '#93C5FD' : '#1E3A8A', fontSize: 13, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: chartData.insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />}
+                                        {sourceMode === 'value' && chartData.insight && <div className="mt-5 p-3 bg-blue-50 dark:bg-blue-500/5 rounded-xl text-blue-800 dark:text-blue-300 text-xs leading-relaxed border border-blue-100 dark:border-blue-500/10" dangerouslySetInnerHTML={{ __html: chartData.insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />}
                                     </>
-                                ) : <p style={{ color: C.muted, textAlign: 'center', padding: '24px 0' }}>لا توجد بيانات</p>}
+                                ) : <p className="text-slate-400 text-center py-6">لا توجد بيانات</p>}
                         </div>
-                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 28 }}>
-                            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}><BarChart2 size={20} color="#7C3AED" /> أنواع المشاريع والقيمة</h3>
+                        <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl p-7 shadow-sm">
+                            <h3 className="text-lg font-extrabold mb-6 flex items-center gap-2 text-slate-900 dark:text-white"><BarChart2 size={20} className="text-purple-500" /> أنواع المشاريع والقيمة</h3>
                             {chartData.types.length > 0
                                 ? <BarChart data={chartData.types} colors={barColors} isDark={isDark} />
-                                : <p style={{ color: C.muted, textAlign: 'center', padding: '24px 0' }}>لا توجد بيانات</p>}
+                                : <p className="text-slate-400 text-center py-6">لا توجد بيانات</p>}
                         </div>
                     </div>
 
                     {/* ── ADVANCED DATA GRID ── */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 0, overflow: 'hidden' }}>
-                        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-                                <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>جدول العقود الشامل</h3>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <span style={{ color: C.muted, fontSize: 14 }}>{filtered.length} نتيجة</span>
-                                    {hasFilters && <button onClick={clearFilters} style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: FONT }}><X size={14} /> مسح الفلاتر</button>}
+                    <div className="bg-white dark:bg-[#151D2F] border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-sm">
+                        <div className="px-6 py-5 border-b border-slate-200 dark:border-white/5">
+                            <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+                                <h3 className="text-xl font-extrabold m-0 text-slate-900 dark:text-white">جدول العقود الشامل</h3>
+                                <div className="flex items-center gap-2.5">
+                                    <span className="text-slate-400 text-sm">{filtered.length} نتيجة</span>
+                                    {hasFilters && <button onClick={clearFilters} className="text-red-500 bg-none bg-transparent border-none cursor-pointer text-[13px] inline-flex items-center gap-1 hover:underline"><X size={14} /> مسح الفلاتر</button>}
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                                <div style={{ position: 'relative' }}>
-                                    <Search size={16} color={C.muted} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                                    <input type="text" placeholder="بحث باسم العميل، جوال..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} style={{ ...inputStyle, paddingRight: 38 }} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="relative">
+                                    <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    <input type="text" placeholder="بحث باسم العميل، جوال..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white pr-10 pl-3 py-2 rounded-xl outline-none text-sm focus:border-blue-400 transition-colors" />
                                 </div>
-                                <div style={{ position: 'relative' }}>
-                                    <Filter size={15} color={C.muted} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                                    <select value={filterSales} onChange={e => { setFilterSales(e.target.value); setPage(1); }} style={{ ...selectStyle, paddingRight: 36 }}>
+                                <div className="relative">
+                                    <Filter size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    <select value={filterSales} onChange={e => { setFilterSales(e.target.value); setPage(1); }} className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white pr-9 pl-3 py-2 rounded-xl outline-none text-sm cursor-pointer focus:border-blue-400 transition-colors">
                                         <option value="">تصفية بالمندوب - الكل</option>
                                         {uniqueSales.map(s => <option key={s} value={s} style={{ color: '#0f172a' }}>{s}</option>)}
                                     </select>
                                 </div>
-                                <div style={{ position: 'relative' }}>
-                                    <Filter size={15} color={C.muted} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                                    <select value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(1); }} style={{ ...selectStyle, paddingRight: 36 }}>
+                                <div className="relative">
+                                    <Filter size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    <select value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(1); }} className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white pr-9 pl-3 py-2 rounded-xl outline-none text-sm cursor-pointer focus:border-blue-400 transition-colors">
                                         <option value="">تصفية بالمصدر - الكل</option>
                                         {uniqueSources.map(s => <option key={s} value={s} style={{ color: '#0f172a' }}>{s}</option>)}
                                     </select>
                                 </div>
-                                <div style={{ position: 'relative' }}>
-                                    <Filter size={15} color={C.muted} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                                    <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} style={{ ...selectStyle, paddingRight: 36 }}>
+                                <div className="relative">
+                                    <Filter size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white pr-9 pl-3 py-2 rounded-xl outline-none text-sm cursor-pointer focus:border-blue-400 transition-colors">
                                         <option value="">نوع المشروع - الكل</option>
                                         {uniqueTypes.map(s => <option key={s} value={s} style={{ color: '#0f172a' }}>{s}</option>)}
                                     </select>
@@ -792,16 +783,16 @@ export default function GlobalTarget() {
                             </div>
                         </div>
 
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontFamily: FONT, fontSize: 14 }}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-right text-sm">
                                 <thead>
-                                    <tr style={{ background: isDark ? 'rgba(255,255,255,.02)' : '#F8FAFC', borderBottom: `2px solid ${C.border}` }}>
+                                    <tr className="bg-slate-50 dark:bg-white/[0.02] border-b-2 border-slate-200 dark:border-white/5">
                                         {['#', 'اسم العميل', 'المصدر', 'نوع المشروع', 'المبيعات', 'تاريخ التحويل', 'المبلغ'].map((col, i) => {
                                             const sortable = col === 'المبلغ' || col === 'تاريخ التحويل';
                                             return (
                                                 <th key={i} onClick={() => sortable && handleSort(col === 'المبلغ' ? 'المبلغ' : 'تاريخ')}
-                                                    style={{ padding: '16px 20px', color: C.muted, fontWeight: 600, fontSize: 13, cursor: sortable ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-start' }}>
+                                                    className={`px-5 py-4 text-slate-500 dark:text-slate-400 font-semibold text-[13px] whitespace-nowrap ${sortable ? 'cursor-pointer hover:text-slate-700 dark:hover:text-slate-200' : ''}`}>
+                                                    <div className="flex items-center gap-1.5">
                                                         {col} {sortable && <SortIcon col={col === 'المبلغ' ? 'المبلغ' : 'تاريخ'} />}
                                                     </div>
                                                 </th>
@@ -813,25 +804,23 @@ export default function GlobalTarget() {
                                     <AnimatePresence>
                                         {pageData.length > 0 ? pageData.map((row, i) => (
                                             <motion.tr key={row.__name + i} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                                                style={{ borderBottom: `1px solid ${C.border}`, transition: 'background .15s' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,.015)' : '#F1F5F9'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                className="border-b border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.015] transition-colors"
                                             >
-                                                <td style={{ padding: '16px 20px', color: C.muted, fontWeight: 600, width: 40 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
-                                                <td style={{ padding: '16px 20px', fontWeight: 700 }}>{row.__name}</td>
-                                                <td style={{ padding: '16px 20px' }}>{row.__source ? <Badge label={row.__source} color={getBadgeColor(row.__source)} /> : <span style={{ color: C.muted }}>—</span>}</td>
-                                                <td style={{ padding: '16px 20px' }}>{row.__type ? <Badge label={row.__type} color={getBadgeColor(row.__type)} /> : <span style={{ color: C.muted }}>—</span>}</td>
-                                                <td style={{ padding: '16px 20px' }}>{row.__sales ? <Badge label={row.__sales} color={getBadgeColor(`__rep_${row.__sales}`)} /> : <span style={{ color: C.muted }}>—</span>}</td>
-                                                <td style={{ padding: '16px 20px', color: C.muted, fontSize: 13, whiteSpace: 'nowrap' }}>{row.__date || '—'}</td>
-                                                <td style={{ padding: '16px 20px', fontWeight: 800, fontFamily: 'monospace', color: '#10B981', fontSize: 15, whiteSpace: 'nowrap' }}>{fmtSAR(row.__amount)}</td>
+                                                <td className="px-5 py-4 text-slate-400 dark:text-slate-500 font-semibold w-10">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                                                <td className="px-5 py-4 font-bold text-slate-900 dark:text-white">{row.__name}</td>
+                                                <td className="px-5 py-4">{row.__source ? <Badge label={row.__source} color={getBadgeColor(row.__source)} /> : <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                                                <td className="px-5 py-4">{row.__type ? <Badge label={row.__type} color={getBadgeColor(row.__type)} /> : <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                                                <td className="px-5 py-4">{row.__sales ? <Badge label={row.__sales} color={getBadgeColor(`__rep_${row.__sales}`)} /> : <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                                                <td className="px-5 py-4 text-slate-400 dark:text-slate-500 text-[13px] whitespace-nowrap">{row.__date || '—'}</td>
+                                                <td className="px-5 py-4 font-extrabold font-mono text-emerald-500 text-[15px] whitespace-nowrap">{fmtSAR(row.__amount)}</td>
                                             </motion.tr>
                                         )) : (
                                             <tr>
-                                                <td colSpan={7} style={{ padding: '60px 20px', textAlign: 'center' }}>
-                                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                                                        <Search size={40} color={C.muted} />
-                                                        <p style={{ color: C.muted, fontSize: 16, fontWeight: 600, margin: 0 }}>لا توجد نتائج مطابقة لخيارات الفلترة المحددة</p>
-                                                        <button onClick={clearFilters} style={{ color: '#4F8EF7', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: FONT, textDecoration: 'underline' }}>مسح الفلاتر وإظهار كل العقود</button>
+                                                <td colSpan={7} className="py-16 text-center">
+                                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3">
+                                                        <Search size={40} className="text-slate-300 dark:text-slate-600" />
+                                                        <p className="text-slate-400 text-base font-semibold m-0">لا توجد نتائج مطابقة لخيارات الفلترة المحددة</p>
+                                                        <button onClick={clearFilters} className="text-[#4F8EF7] bg-none bg-transparent border-none cursor-pointer text-sm underline hover:no-underline">مسح الفلاتر وإظهار كل العقود</button>
                                                     </motion.div>
                                                 </td>
                                             </tr>
@@ -842,16 +831,16 @@ export default function GlobalTarget() {
                         </div>
 
                         {totalPages > 1 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: `1px solid ${C.border}` }}>
-                                <span style={{ color: C.muted, fontSize: 14 }}>صفحة {page} من {totalPages} | إجمالي {filtered.length} عقد</span>
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 14px', borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: page === 1 ? C.muted : C.text, cursor: page === 1 ? 'not-allowed' : 'pointer' }}><ChevronRight size={18} /></button>
+                            <div className="flex justify-between items-center px-6 py-4 border-t border-slate-100 dark:border-white/5">
+                                <span className="text-slate-400 text-sm">صفحة {page} من {totalPages} | إجمالي {filtered.length} عقد</span>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className={`p-1.5 rounded-lg border transition-all ${page === 1 ? 'border-slate-200 dark:border-white/5 text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer'}`}><ChevronRight size={18} /></button>
                                     {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                                         let p = i + 1;
                                         if (totalPages > 5) p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
-                                        return <button key={p} onClick={() => setPage(p)} style={{ padding: '6px 14px', borderRadius: 8, fontFamily: FONT, background: page === p ? '#4F8EF7' : C.card, border: `1px solid ${page === p ? 'transparent' : C.border}`, color: page === p ? 'white' : C.text, cursor: 'pointer', fontWeight: page === p ? 700 : 400 }}>{p}</button>;
+                                        return <button key={p} onClick={() => setPage(p)} className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${page === p ? 'bg-[#4F8EF7] border-transparent text-white font-bold shadow-sm' : 'bg-transparent border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>{p}</button>;
                                     })}
-                                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 14px', borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: page === totalPages ? C.muted : C.text, cursor: page === totalPages ? 'not-allowed' : 'pointer' }}><ChevronLeft size={18} /></button>
+                                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className={`p-1.5 rounded-lg border transition-all ${page === totalPages ? 'border-slate-200 dark:border-white/5 text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer'}`}><ChevronLeft size={18} /></button>
                                 </div>
                             </div>
                         )}

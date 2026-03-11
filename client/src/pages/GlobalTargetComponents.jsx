@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, User, X } from 'lucide-react';
+import { Trophy, User, X, Clock, Calendar } from 'lucide-react';
 
 /* ─────────────────────────── CONSTANTS & UTILS ─────────────────────────── */
 export const FONT = "'IBM Plex Sans Arabic', sans-serif";
@@ -224,97 +224,204 @@ export function RepModal({ repName, onClose, allMonthsData, isDark }) {
 }
 
 /* ─────────────────────────── PROGRESS PROGRESS CHART ─────────────────────────── */
-export function PerformanceProgressChart({ data, totalTarget, isDark, activeSheetName }) {
+export function PerformanceProgressChart({ currentData, allMonthsData, totalTarget, isDark, activeSheetName }) {
     const C = {
         bg: isDark ? '#0F172A' : '#F1F5F9',
-        border: isDark ? '#1E293B' : '#E2E8F0',
+        border: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
         text: isDark ? '#F8FAFC' : '#1E293B',
         muted: isDark ? '#94A3B8' : '#64748B',
-        target: '#7C3AED',
-        actual: '#10B981',
-        today: '#F59E0B'
+        current: '#4F8EF7',
+        prev1: '#7C3AED',
+        prev2: isDark ? '#475569' : '#94A3B8',
+        target: '#F59E0B'
     };
 
-    const daysInMonth = 31; // Simplified for UI
+    const daysInMonth = 31;
     const today = new Date();
     const currentDay = today.getDate();
     const isCurrentMonth = activeSheetName?.includes(today.toLocaleDateString('ar-SA', { month: 'long' })) || false;
 
-    // Calculate daily cumulative data
-    const dailyData = useMemo(() => {
+    // Toggles state
+    const [showCurrent, setShowCurrent] = useState(true);
+    const [showPrev1, setShowPrev1] = useState(true);
+    const [showPrev2, setShowPrev2] = useState(true);
+    const [showTarget, setShowTarget] = useState(true);
+    const [hoverDay, setHoverDay] = useState(null);
+
+    // Process data into cumulative daily arrays
+    const getCumulative = (dataArray) => {
         const days = new Array(daysInMonth).fill(0);
-        data.forEach(r => {
+        (dataArray || []).forEach(r => {
             const d = parseDate(r.__date);
             if (d) {
                 const dayIdx = d.getDate() - 1;
                 if (dayIdx >= 0 && dayIdx < daysInMonth) {
-                    days[dayIdx] += r.__amount;
+                    days[dayIdx] += (r.__amount || 0); // Gross amount
                 }
             }
         });
-
         let cumulative = 0;
-        return days.map((amt, i) => {
+        return days.map(amt => {
             cumulative += amt;
-            return { day: i + 1, amount: amt, cumulative };
+            return cumulative;
         });
-    }, [data]);
+    };
 
-    const maxVal = Math.max(totalTarget, ...dailyData.map(d => d.cumulative));
-    const W = 600, H = 200, P = 30; // Width, Height, Padding
-    const getX = (item) => P + ((item.day - 1) / (daysInMonth - 1)) * (W - 2 * P);
-    const getY = (val) => (H - P) - (val / maxVal) * (H - 2 * P);
+    const currentLine = useMemo(() => getCumulative(currentData), [currentData]);
+    
+    // Find past months names and data
+    const activeIdx = allMonthsData.findIndex(m => m.name === activeSheetName);
+    const validIdx = activeIdx >= 0 ? activeIdx : allMonthsData.length - 1;
+    
+    const prev1Month = validIdx > 0 ? allMonthsData[validIdx - 1] : null;
+    const prev1Line = useMemo(() => getCumulative(prev1Month?.data), [prev1Month]);
+    const prev1Name = prev1Month?.name?.replace(/\D/g, '').trim() || prev1Month?.name?.split(' ')[0] || 'الشهر السابق';
 
-    // Paths
-    const targetPath = `M ${getX({ day: 1 })} ${getY(0)} L ${getX({ day: daysInMonth })} ${getY(totalTarget)}`;
-    const actualPoints = dailyData
-        .filter(d => !isCurrentMonth || d.day <= currentDay)
-        .map(d => `${getX(d)},${getY(d.cumulative)}`)
-        .join(' ');
-    const actualPath = `M ${getX({ day: 1 })} ${getY(0)} L ${actualPoints}`;
+    const prev2Month = validIdx > 1 ? allMonthsData[validIdx - 2] : null;
+    const prev2Line = useMemo(() => getCumulative(prev2Month?.data), [prev2Month]);
+    const prev2Name = prev2Month?.name?.replace(/\D/g, '').trim() || prev2Month?.name?.split(' ')[0] || 'قبل شهرين';
+
+    const maxVal = Math.max(
+        totalTarget,
+        ...(showCurrent ? currentLine : []),
+        ...(showPrev1 ? prev1Line : []),
+        ...(showPrev2 ? prev2Line : [])
+    );
+
+    const W = 600, H = 220, P = 30, PL = 50; // Width, Height, Padding, PaddingLeft
+    const getX = (day) => PL + ((day - 1) / (daysInMonth - 1)) * (W - P - PL);
+    const getY = (val) => (H - P) - (val / Math.max(maxVal, 1)) * (H - 2 * P);
+
+    // Generate path strokes
+    const genPath = (lineArray, limitDay = daysInMonth) => {
+        return `M ${getX(1)} ${getY(0)} L ` + lineArray.map((val, i) => {
+            const day = i + 1;
+            if (day > limitDay) return '';
+            return `${getX(day)},${getY(val)}`;
+        }).filter(Boolean).join(' ');
+    };
+
+    const currentPath = genPath(currentLine, isCurrentMonth ? currentDay : daysInMonth);
+    const currentProjPath = isCurrentMonth && currentDay < daysInMonth ? 
+        `M ${getX(currentDay)} ${getY(currentLine[currentDay-1])} L ${getX(daysInMonth)} ${getY(currentLine[currentDay-1] + ((currentLine[currentDay-1]/currentDay) * (daysInMonth-currentDay)))}` : '';
 
     return (
-        <div style={{ direction: 'rtl', fontFamily: FONT }}>
-            <div style={{ display: 'flex', gap: 20, marginBottom: 16, fontSize: 13, fontWeight: 600 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 3, background: C.target, borderRadius: 2 }} /> المستهدف التراكمي</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 12, height: 3, background: C.actual, borderRadius: 2 }} /> الإنجاز الفعلي</div>
+        <div style={{ direction: 'rtl', fontFamily: FONT, position: 'relative' }}>
+            {/* Toggles */}
+            <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap', fontSize: 13, fontWeight: 600 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: showCurrent ? C.text : C.muted, transition: 'color 0.2s' }}>
+                    <input type="checkbox" checked={showCurrent} onChange={e => setShowCurrent(e.target.checked)} style={{ accentColor: C.current, width: 14, height: 14 }} />
+                    <div style={{ width: 12, height: 3, background: showCurrent ? C.current : C.muted, borderRadius: 2 }} /> {activeSheetName?.split(' ')[0] || 'الشهر الحالي'}
+                </label>
+                {prev1Month && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: showPrev1 ? C.text : C.muted, transition: 'color 0.2s' }}>
+                        <input type="checkbox" checked={showPrev1} onChange={e => setShowPrev1(e.target.checked)} style={{ accentColor: C.prev1, width: 14, height: 14 }} />
+                        <div style={{ width: 12, height: 3, background: showPrev1 ? C.prev1 : C.muted, borderRadius: 2 }} /> {prev1Name}
+                    </label>
+                )}
+                {prev2Month && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: showPrev2 ? C.text : C.muted, transition: 'color 0.2s' }}>
+                        <input type="checkbox" checked={showPrev2} onChange={e => setShowPrev2(e.target.checked)} style={{ accentColor: C.prev2, width: 14, height: 14 }} />
+                        <div style={{ width: 12, height: 3, background: showPrev2 ? C.prev2 : C.muted, borderRadius: 2 }} /> {prev2Name}
+                    </label>
+                )}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: showTarget ? C.text : C.muted, transition: 'color 0.2s' }}>
+                    <input type="checkbox" checked={showTarget} onChange={e => setShowTarget(e.target.checked)} style={{ accentColor: C.target, width: 14, height: 14 }} />
+                    <div style={{ width: 12, height: 3, background: showTarget ? C.target : C.muted, borderRadius: 2, borderStyle: 'dashed' }} /> خط الهدف
+                </label>
             </div>
 
-            <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
-                {/* Grid Lines */}
-                <line x1={P} y1={H - P} x2={W - P} y2={H - P} stroke={C.border} strokeWidth="1" />
-                <line x1={P} y1={P} x2={P} y2={H - P} stroke={C.border} strokeWidth="1" />
+            <div style={{ position: 'relative' }} onMouseLeave={() => setHoverDay(null)}>
+                <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
+                    {/* Grid Lines */}
+                    <line x1={PL} y1={H - P} x2={W - P} y2={H - P} stroke={C.border} strokeWidth="1" />
+                    <line x1={PL} y1={P} x2={PL} y2={H - P} stroke={C.border} strokeWidth="1" />
 
-                {/* Target Line */}
-                <path d={targetPath} fill="none" stroke={C.target} strokeWidth="2" strokeDasharray="4 4" opacity="0.6" />
+                    {/* Target Line */}
+                    {showTarget && <path d={`M ${PL} ${getY(totalTarget)} L ${W - P} ${getY(totalTarget)}`} fill="none" stroke={C.target} strokeWidth="2" strokeDasharray="5 5" opacity="0.6" />}
 
-                {/* Actual Line */}
-                <motion.path
-                    initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, ease: "easeOut" }}
-                    d={actualPath} fill="none" stroke={C.actual} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
-                />
+                    {/* Prev 2 Line */}
+                    {showPrev2 && prev2Month && <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5 }}
+                        d={genPath(prev2Line)} fill="none" stroke={C.prev2} strokeWidth="2" opacity="0.7" strokeLinecap="round" strokeLinejoin="round" />}
 
-                {/* Today Marker */}
-                {isCurrentMonth && (
-                    <g>
-                        <line x1={getX({ day: currentDay })} y1={P} x2={getX({ day: currentDay })} y2={H - P} stroke={C.today} strokeWidth="1" strokeDasharray="2 2" />
-                        <circle cx={getX({ day: currentDay })} cy={H - P + 5} r="3" fill={C.today} />
-                        <text x={getX({ day: currentDay })} y={P - 5} textAnchor="middle" fontSize="10" fill={C.today} fontWeight="700">اليوم</text>
-                    </g>
+                    {/* Prev 1 Line */}
+                    {showPrev1 && prev1Month && <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5 }}
+                        d={genPath(prev1Line)} fill="none" stroke={C.prev1} strokeWidth="3" opacity="0.9" strokeLinecap="round" strokeLinejoin="round" />}
+
+                    {/* Current Line */}
+                    {showCurrent && (
+                        <>
+                            {isCurrentMonth && currentDay < daysInMonth && (
+                                <path d={currentProjPath} fill="none" stroke={C.current} strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                            )}
+                            <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, ease: "easeOut" }}
+                                d={currentPath} fill="none" stroke={C.current} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                        </>
+                    )}
+
+                    {/* Today Marker */}
+                    {isCurrentMonth && (
+                        <g>
+                            <line x1={getX(currentDay)} y1={P} x2={getX(currentDay)} y2={H - P} stroke={isDark?'#fff':'#000'} strokeWidth="1" strokeDasharray="2 2" opacity="0.3" />
+                        </g>
+                    )}
+
+                    {/* Legend Days */}
+                    {[1, 5, 10, 15, 20, 25, 31].map(d => (
+                        <text key={d} x={getX(d)} y={H - 10} textAnchor="middle" fontSize="10" fill={C.muted}>{d}</text>
+                    ))}
+
+                    <text x={W - P + 5} y={getY(totalTarget)} fontSize="10" fill={C.target} fontWeight="700" alignmentBaseline="middle">{fmt(totalTarget)}</text>
+                    <text x={PL - 5} y={H - P} textAnchor="end" fontSize="10" fill={C.muted}>0</text>
+                    
+                    {/* Invisible Hover Rectangles */}
+                    {new Array(daysInMonth).fill(0).map((_, i) => (
+                        <rect key={i} x={getX(i+1) - ((W-P-PL)/daysInMonth)/2} y={P} width={(W-P-PL)/daysInMonth} height={H - 2*P} fill="transparent" 
+                            onMouseEnter={() => setHoverDay(i+1)} style={{ cursor: 'crosshair' }} />
+                    ))}
+
+                    {/* Hover Guide */}
+                    {hoverDay && (
+                        <line x1={getX(hoverDay)} y1={P} x2={getX(hoverDay)} y2={H - P} stroke={isDark ? '#E2E8F0' : '#334155'} strokeWidth="1" opacity="0.3" pointerEvents="none" />
+                    )}
+                </svg>
+
+                {/* Tooltip */}
+                {hoverDay && (
+                    <div style={{
+                        position: 'absolute', right: hoverDay > 15 ? `${((daysInMonth - hoverDay) / (daysInMonth - 1)) * (100 - (PL/W * 100)) + 5}%` : `auto`,
+                        left: hoverDay <= 15 ? `${((hoverDay - 1) / (daysInMonth - 1)) * (100 - (PL/W * 100)) + 6}%` : `auto`,
+                        top: P,
+                        background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)', border: `1px solid ${C.border}`,
+                        padding: '12px 14px', borderRadius: 12, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)',
+                        pointerEvents: 'none', zIndex: 10, backdropFilter: 'blur(8px)', minWidth: 160
+                    }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: C.text, marginBottom: 8, borderBottom: `1px solid ${C.border}`, paddingBottom: 6 }}>يوم {hoverDay}</div>
+                        {showCurrent && (isCurrentMonth ? hoverDay <= currentDay : true) && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                <span style={{ color: C.current, fontWeight: 700 }}>{activeSheetName?.split(' ')[0] || 'الحالي'}:</span>
+                                <span style={{ fontWeight: 800, color: C.text }}>{fmt(currentLine[hoverDay-1])}</span>
+                            </div>
+                        )}
+                        {showPrev1 && prev1Month && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                <span style={{ color: C.prev1, fontWeight: 700 }}>{prev1Name}:</span>
+                                <span style={{ fontWeight: 800, color: C.text }}>{fmt(prev1Line[hoverDay-1])}</span>
+                            </div>
+                        )}
+                        {showPrev2 && prev2Month && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                <span style={{ color: C.prev2, fontWeight: 700 }}>{prev2Name}:</span>
+                                <span style={{ fontWeight: 800, color: C.text }}>{fmt(prev2Line[hoverDay-1])}</span>
+                            </div>
+                        )}
+                        {showCurrent && showPrev1 && prev1Month && (isCurrentMonth ? hoverDay <= currentDay : true) && (
+                            <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`, fontSize: 11, fontWeight: 700, textAlign: 'center', color: currentLine[hoverDay-1] >= prev1Line[hoverDay-1] ? '#10B981' : '#EF4444' }}>
+                                الفارق: {fmtSAR(currentLine[hoverDay-1] - prev1Line[hoverDay-1])}
+                            </div>
+                        )}
+                    </div>
                 )}
-
-                {/* Legend Days */}
-                {[1, 10, 20, 31].map(d => (
-                    <text key={d} x={getX({ day: d })} y={H - 10} textAnchor="middle" fontSize="10" fill={C.muted}>{d}</text>
-                ))}
-
-                {/* Labels */}
-                <text x={W - P + 5} y={getY(totalTarget)} fontSize="10" fill={C.target} fontWeight="700" alignmentBaseline="middle">{fmt(totalTarget)}</text>
-                <text x={P - 5} y={H - P} textAnchor="end" fontSize="10" fill={C.muted}>0</text>
-            </svg>
-
-            <div style={{ marginTop: 12, padding: 12, background: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC', borderRadius: 12, border: `1px solid ${C.border}`, fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
-                يظهر هذا المخطط **نمو المبيعات التراكمي**. الخط المقطع يمثل المسار المثالي للوصول للهدف ({fmtSAR(totalTarget)}) بنهاية الشهر.
             </div>
         </div>
     );
@@ -326,42 +433,96 @@ export function FastestDeals({ data, isDark }) {
 
     const deals = useMemo(() => {
         return data.map(r => {
-            const d1 = parseDate(r['تاريخ أول تواصل']);
+            const d1 = parseDate(r.__first_contact);
             const d2 = parseDate(r.__date);
             if (d1 && d2) {
-                const diffTime = Math.abs(d2 - d1);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return { ...r, __daysToClose: diffDays };
+                // Ensure date difference is strictly positive and valid
+                const diffTime = d2.getTime() - d1.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays > 0) {
+                    return { ...r, __daysToClose: diffDays };
+                }
             }
             return null;
         }).filter(Boolean).sort((a, b) => a.__daysToClose - b.__daysToClose).slice(0, 5);
     }, [data]);
 
-    const avg = deals.length ? deals.reduce((s, d) => s + d.__daysToClose, 0) / deals.length : 0;
-    if (!deals.length) return <p style={{ color: C.muted, textAlign: 'center', padding: '24px 0', fontFamily: FONT }}>لا توفر تواريخ كافية للحساب</p>;
+    if (deals.length < 3) {
+        return (
+            <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.02)' : '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={24} color={C.muted} opacity={0.5} />
+                </div>
+                <div style={{ color: C.muted, fontFamily: FONT, fontSize: 14, fontWeight: 600 }}>لا توجد بيانات كافية هذا الشهر</div>
+            </div>
+        );
+    }
+
+    const avg = deals.reduce((s, d) => s + d.__daysToClose, 0) / deals.length;
 
     return (
         <div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {deals.map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC', borderRadius: 12, border: `1px solid ${C.border}` }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', borderRadius: 12, border: `1px solid ${C.border}`, transition: 'all 0.2s' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: i === 0 ? 'rgba(245,158,11,0.2)' : (isDark ? 'rgba(255,255,255,0.05)' : '#E2E8F0'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: i === 0 ? 'rgba(245,158,11,0.15)' : (isDark ? 'rgba(255,255,255,0.04)' : '#E2E8F0'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {i === 0 ? <Trophy size={16} color="#F59E0B" /> : <span style={{ fontSize: 13, color: C.muted, fontWeight: 700 }}>{i + 1}</span>}
                             </div>
                             <div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, fontFamily: FONT }}>{d.__name}</div>
-                                <div style={{ fontSize: 12, color: C.muted, fontFamily: FONT, marginTop: 2 }}>{d.__sales} • {d.__type}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: C.text, fontFamily: FONT }}>{d.__name}</div>
+                                <div style={{ fontSize: 12, color: C.muted, fontFamily: FONT, marginTop: 3 }}>{d.__sales} {d.__type && `• ${d.__type}`}</div>
                             </div>
                         </div>
-                        <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', fontFamily: FONT }}>{fmtSAR(d.__amount)}</div>
-                            <div style={{ fontSize: 12, color: C.muted, fontFamily: FONT, marginTop: 2 }}>في {d.__daysToClose} أيام</div>
+                        <div style={{ textAlign: 'left', minWidth: 80 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', fontFamily: FONT, letterSpacing: '-0.5px' }}>{fmtSAR(d.__amount)}</div>
+                            <div style={{ fontSize: 12, color: '#F59E0B', fontWeight: 700, fontFamily: FONT, marginTop: 3 }}>في {d.__daysToClose} {d.__daysToClose === 1 ? 'يوم' : d.__daysToClose === 2 ? 'يومين' : d.__daysToClose <= 10 ? 'أيام' : 'يوم'}</div>
                         </div>
                     </div>
                 ))}
             </div>
-            {deals.length > 0 && <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.muted, fontFamily: FONT }}>متوسط الإغلاق في هذه القائمة: {Math.round(avg)} يوم</div>}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '12px 16px', borderRadius: 12, background: isDark ? 'rgba(79, 142, 247, 0.05)' : '#EFF6FF', border: isDark ? '1px solid rgba(79, 142, 247, 0.1)' : 'none' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#93C5FD' : '#1E3A8A', fontFamily: FONT }}>متوسط الإغلاق التنافسي:</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#4F8EF7', fontFamily: FONT }}>{Math.round(avg)} يوم</span>
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────── BEST DAY WIDGET ─────────────────────────── */
+export function BestDayWidget({ data, isDark }) {
+    const C = { border: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0', text: isDark ? '#F8FAFC' : '#1E293B', muted: isDark ? '#94A3B8' : '#64748B' };
+
+    const bestDay = useMemo(() => {
+        const days = {};
+        data.forEach(r => {
+            const dateStr = r.__date;
+            if (!dateStr) return;
+            if (!days[dateStr]) days[dateStr] = 0;
+            days[dateStr] += r.__amount;
+        });
+        
+        const sorted = Object.entries(days).sort((a, b) => b[1] - a[1]);
+        if (sorted.length === 0) return null;
+        return { date: sorted[0][0], amount: sorted[0][1] };
+    }, [data]);
+
+    if (!bestDay) return null;
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: isDark ? 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.02))' : 'linear-gradient(135deg, #ECFDF5, #F8FAFC)', borderRadius: 16, border: `1px solid ${isDark ? 'rgba(16,185,129,0.2)' : '#A7F3D0'}`, marginBottom: 20, fontFamily: FONT }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: isDark ? 'rgba(16,185,129,0.2)' : '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Calendar size={20} color="#10B981" />
+                </div>
+                <div>
+                    <div style={{ fontSize: 13, color: isDark ? '#A7F3D0' : '#047857', fontWeight: 700, marginBottom: 2 }}>أفضل يوم كحجم مبيعات</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{bestDay.date}</div>
+                </div>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#10B981' }}>{fmtSAR(bestDay.amount)}</div>
+            </div>
         </div>
     );
 }

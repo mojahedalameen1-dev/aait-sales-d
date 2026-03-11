@@ -12,7 +12,7 @@ import { useToast } from '../components/ToastProvider';
 import {
     FONT, fmt, fmtSAR, fmtPct, MEDAL, parseDate,
     AnimatedNumber, ProgressBar, DonutChart, BarChart, Badge,
-    RepModal, PerformanceProgressChart, FastestDeals, getBadgeColor, Confetti
+    RepModal, PerformanceProgressChart, FastestDeals, getBadgeColor, Confetti, BestDayWidget
 } from './GlobalTargetComponents';
 
 /* ─────────────────────────── CONSTANTS ─────────────────────────── */
@@ -118,8 +118,10 @@ export default function GlobalTarget() {
 
                 // Check Column M
                 const colMIndex = headers.findIndex(h => h.trim() === 'م');
-                const valM = colMIndex !== -1 ? cells[colMIndex] : '';
-                if (!valM || ['المجموع', 'الإجمالي', 'total'].some(w => valM.toLowerCase().includes(w))) {
+                const valM = colMIndex !== -1 ? cells[colMIndex]?.trim() : '';
+                
+                // Valid M column must be a number (protects against totals and empty rows)
+                if (!valM || !/^\d+$/.test(valM)) {
                     excludedCount++;
                     continue;
                 }
@@ -129,15 +131,9 @@ export default function GlobalTarget() {
 
                 const keys = Object.keys(row);
                 const nameKey = prioKey(keys, ['اسم العميل حسب العقد', 'اسم العميل']);
-                const name = row[nameKey] || '';
+                const name = row[nameKey]?.trim() || '';
 
                 if (!name || /(^|\s)(المجموع|الإجمالي|اجمالي|مجموع|total)(\s|$)/i.test(name)) {
-                    excludedCount++;
-                    continue;
-                }
-
-                // If name is just a number (like in January sheet total row), skip it
-                if (/^[\d,.\s]+$/.test(name)) {
                     excludedCount++;
                     continue;
                 }
@@ -159,15 +155,25 @@ export default function GlobalTarget() {
                     '__team': row[prioKey(keys, ['الفريق'])] || '',
                     '__date': row[prioKey(keys, ['تاريخ التحويل', 'تاريخ الدفعة', 'تاريخ'])] || '',
                     '__phone': row[prioKey(keys, ['الجوال', 'رقم'])] || '',
+                    '__first_contact': row[prioKey(keys, ['تاريخ أول تواصل', 'اول تواصل'])] || '',
                     ...row
                 });
             }
 
-            if (!isBackground) {
-                setAllData(parsedRows);
-                addToast('success', `تم تحميل ${parsedRows.length} عقد بنجاح`);
+            // Exclude outliers (> 3 * average amount)
+            let finalRows = parsedRows;
+            if (parsedRows.length > 0) {
+                const totalAmt = parsedRows.reduce((sum, r) => sum + r.__amount, 0);
+                const avgAmt = totalAmt / parsedRows.length;
+                const outlierLimit = avgAmt * 3;
+                finalRows = parsedRows.filter(r => r.__amount <= outlierLimit);
             }
-            return parsedRows;
+
+            if (!isBackground) {
+                setAllData(finalRows);
+                addToast('success', `تم تحميل ${finalRows.length} عقد بنجاح`);
+            }
+            return finalRows;
         } catch (e) {
             console.error(e);
             if (!isBackground) { setError(e.message); setAllData([]); addToast('error', 'تعذّر تحميل البيانات'); }
@@ -268,43 +274,105 @@ export default function GlobalTarget() {
     const activeSheetDef = sheets.find(s => s.gid === activeGid);
     const isCurrentMonth = activeSheetDef?.gid === sheets[sheets.length - 1]?.gid; // Dynamically newest month
 
-    // The Company Target is mathematically based on the Net Amount (صافي المبلغ) which equals exactly ~114,380
     const totalAmount = useMemo(() => allData.reduce((s, r) => s + (r.__net_amount || 0), 0), [allData]);
-    // For insights/average, it represents the total value 
     const totalGrossAmount = useMemo(() => allData.reduce((s, r) => s + r.__amount, 0), [allData]);
     const achievementPct = (totalAmount / GLOBAL_TARGET) * 100;
     const remaining = Math.max(0, GLOBAL_TARGET - totalAmount);
 
     let forecast = null;
     let daysElapsed = 0;
-    let daysInMonth = 30; // fallback
+    let daysInMonth = 30;
+    let historicalAvgRatio = 0;
+    let historicalAvgExpectedAmount = 0;
+    let momGapPct = 0;
+    let momHtml = null;
+
+    const currIdx = sheets.findIndex(s => s.gid === activeGid);
+
     if (isCurrentMonth) {
         const today = new Date();
         daysElapsed = today.getDate();
         daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        const dailyAvg = totalAmount / Math.max(1, daysElapsed);
-        const projected = dailyAvg * daysInMonth;
-        forecast = { dailyAvg, projected };
-    }
+        
+        let validPastMonthsCount = 0;
+        let sumHistoricalRatios = 0;
+        let pastMonthsNames = [];
 
-    /* ── MoM Comparison ── */
-    let momHtml = null;
-    const currIdx = sheets.findIndex(s => s.gid === activeGid);
-    if (currIdx > 0) {
-        const prevSheet = sheets[currIdx - 1];
-        const prevData = historicData[prevSheet.gid];
-        if (prevData) {
-            const prevTotalNet = prevData.reduce((s, r) => s + (r.__net_amount || 0), 0);
-            if (prevTotalNet > 0) {
-                const diff = totalAmount - prevTotalNet;
-                const pct = (diff / prevTotalNet) * 100;
-                const color = pct >= 0 ? '#10B981' : '#EF4444';
-                momHtml = (
-                    <span style={{ fontSize: 13, fontWeight: 700, color, display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: FONT }}>
-                        {pct >= 0 ? <TrendingUp size={14} /> : <TrendingUp size={14} style={{ transform: 'scaleY(-1)' }} />}
-                        {Math.abs(pct).toFixed(1)}% {pct >= 0 ? 'ارتفاع' : 'انخفاض'} عن {prevSheet.name.replace(' 2026', '')} (بالصافي)
-                    </span>
-                );
+        // Calculate Historical Ratios for weighted forecast
+        if (currIdx > 0) {
+            for (let j = 0; j < currIdx; j++) {
+                const pSheet = sheets[j];
+                const pData = historicData[pSheet.gid];
+                if (pData && pData.length > 0) {
+                    let pUpToDay = 0;
+                    pData.forEach(r => {
+                        const d = parseDate(r.__date);
+                        if (d && d.getDate() <= daysElapsed) {
+                            pUpToDay += (r.__net_amount || 0);
+                        }
+                    });
+                    
+                    const pctOfTarget = pUpToDay / GLOBAL_TARGET;
+                    sumHistoricalRatios += pctOfTarget;
+                    validPastMonthsCount++;
+                    pastMonthsNames.push(pSheet.name.replace(/\D/g, '').trim() || pSheet.name.split(' ')[0]);
+                }
+            }
+        }
+
+        let projected = 0;
+        let usedHistorical = false;
+
+        if (validPastMonthsCount > 0) {
+            historicalAvgRatio = sumHistoricalRatios / validPastMonthsCount;
+            historicalAvgExpectedAmount = historicalAvgRatio * GLOBAL_TARGET;
+            
+            if (daysElapsed >= 7 && historicalAvgRatio > 0) {
+                const currentRatio = totalAmount / GLOBAL_TARGET;
+                projected = (currentRatio / historicalAvgRatio) * GLOBAL_TARGET;
+                usedHistorical = true;
+            }
+        }
+
+        // Fallback or early days simple average
+        const dailyAvg = totalAmount / Math.max(1, daysElapsed);
+        if (!usedHistorical) {
+            projected = dailyAvg * daysInMonth;
+        }
+
+        forecast = { 
+            projected, 
+            usedHistorical, 
+            daysElapsed, 
+            daysInMonth, 
+            dailyAvg,
+            pastMonthsNames: pastMonthsNames.slice(-2).join(' و ')
+        };
+
+        // Apples-to-Apples MoM Comparison
+        if (currIdx > 0) {
+            const prevSheet = sheets[currIdx - 1];
+            const prevData = historicData[prevSheet.gid];
+            if (prevData) {
+                let prevUpToDay = 0;
+                prevData.forEach(r => {
+                    const d = parseDate(r.__date);
+                    if (d && d.getDate() <= daysElapsed) {
+                        prevUpToDay += (r.__net_amount || 0);
+                    }
+                });
+
+                if (prevUpToDay > 0) {
+                    const diff = totalAmount - prevUpToDay;
+                    momGapPct = (diff / prevUpToDay) * 100;
+                    const color = momGapPct >= 0 ? '#10B981' : '#EF4444';
+                    momHtml = (
+                        <span style={{ fontSize: 13, fontWeight: 700, color, display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: FONT }}>
+                            {momGapPct >= 0 ? <TrendingUp size={14} /> : <TrendingUp size={14} style={{ transform: 'scaleY(-1)' }} />}
+                            {Math.abs(momGapPct).toFixed(1)}% {momGapPct >= 0 ? 'ارتفاع' : 'انخفاض'} عن نفس الفترة في {prevSheet.name.replace(' 2026', '')} (بالصافي)
+                        </span>
+                    );
+                }
             }
         }
     }
@@ -330,46 +398,28 @@ export default function GlobalTarget() {
     }, [allData]);
 
     const motivationalPhrase = useMemo(() => {
-        // --- 1. Past Months (Finished) ---
         if (!isCurrentMonth) {
-            if (achievementPct >= 100) return `شهر استثنائي! حققنا الهدف بنسبة ${fmtPct(achievementPct)}.. هذا هو الشغل الصح 🏆`;
-            if (achievementPct >= 80) return `كنا قريبين جداً بنسبة ${fmtPct(achievementPct)}.. واثقين بالتعويض المضاعف 💯`;
-            return `شهر للتعلم والمراجعة. الإنجاز كان ${fmtPct(achievementPct)}. نجهز لعودة أقوى 📈`;
+            if (achievementPct >= 100) return `🎯 تم تحقيق تارقت المكتب لهذا الشهر!`;
+            return `انتهى الشهر بتحقيق ${fmtPct(achievementPct)} من الهدف.`;
         }
 
-        // --- 2. Current Month (Active) ---
-        const progressExpected = (daysElapsed / daysInMonth) * 100;
-        const diff = achievementPct - progressExpected;
+        // Priority 1
+        if (achievementPct >= 100) return "🎯 تم تحقيق تارقت المكتب لهذا الشهر!";
 
-        // Target Reached Early!
-        if (achievementPct >= 100) return "يا بطل! الهدف في الجيب، الحين وقت كسر الأرقام القياسية 💎";
+        // Priority 2
+        if (momGapPct > 10) return `↑ أداؤكم أعلى بـ ${fmtPct(momGapPct)} من معدلكم التاريخي — استمروا!`;
 
-        // Start of Month (Days 1 - 10)
-        if (daysElapsed <= 10) {
-            if (achievementPct >= 30) return "بداية نارية هالشهر! استمروا بنفس الزخم يا وحوش 🚀";
-            if (achievementPct >= 10) return "ماشيين صح بالبداية، بس نحتاج دعسة أقوى لضمان الهدف 🔥";
-            return "البداية هادية شوي، بس نعرف إنكم تسخنون للثقيل.. شدوا الحيل! 💪";
+        // Priority 3
+        const daysLeft = daysInMonth - daysElapsed;
+        if (daysLeft < 10 && remaining > (GLOBAL_TARGET * 0.3)) {
+            return `⚠️ متبقي ${fmtSAR(remaining)} في ${daysLeft} يوم فقط`;
         }
 
-        // Mid Month (Days 11 - 20)
-        if (daysElapsed <= 20) {
-            if (diff >= 10) return "نص المشوار وعديناه بامتياز، أرقامكم تفتح النفس! 🌟";
-            if (diff > -5) return "ماشين عالخط بالضبط.. حافظوا على الإيقاع لا يوقف 🎯";
-            return "منتصف الشهر! نحتاج شدة حيل مضاعفة عشان نرجع للمسار الذهبي ⏳";
-        }
+        // Priority 4
+        const histDayAvg = historicalAvgExpectedAmount > 0 ? historicalAvgExpectedAmount : forecast?.dailyAvg * daysElapsed;
+        return `متوسطكم التاريخي لهذا اليوم ${fmtSAR(histDayAvg)} — المتوقع بنهاية الشهر ${fmtSAR(forecast?.projected || 0)}`;
 
-        // End of Month (Days 21+)
-        if (daysElapsed > 20) {
-            if (diff >= 0) return "اللفات الأخيرة! كلنا ثقة إنكم بتقفلوها بأرقام خيالية 🏁";
-            if (achievementPct >= 80) return "الهدف قدام عينكم، الدقائق تفرق.. لا توقفون لبعد ما يتسجل الهدف! ⚔️";
-            return "التحدي كبير، بس المبيعات ما تعرف مستحيل! كل عقد الحين له وزنه 👊";
-        }
-
-        return "البداية دايم هي الأصعب، قواكم الله 💪";
-    }, [achievementPct, isCurrentMonth, daysElapsed, daysInMonth]);
-
-    const activeDaysLeft = daysInMonth - daysElapsed;
-    const isLateMonth = daysElapsed > 15;
+    }, [achievementPct, isCurrentMonth, momGapPct, daysElapsed, daysInMonth, remaining, forecast, historicalAvgExpectedAmount]);
 
     /* ── Charts Data ── */
     const chartData = useMemo(() => {
@@ -495,16 +545,26 @@ export default function GlobalTarget() {
                         </div>
 
                         {isCurrentMonth && forecast && (
-                            <div style={{ flex: 1, minWidth: 300, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-                                <div style={{ width: 50, height: 50, borderRadius: 14, background: forecast.projected >= GLOBAL_TARGET ? (isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5') : (isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <Clock size={24} color={forecast.projected >= GLOBAL_TARGET ? '#10B981' : '#F59E0B'} />
-                                </div>
-                                <div>
-                                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>التوقع لنهاية الشهر</h3>
-                                    <div style={{ fontSize: 24, fontWeight: 900, color: forecast.projected >= GLOBAL_TARGET ? '#10B981' : '#F59E0B' }}>
-                                        <AnimatedNumber target={forecast.projected} formatter={fmtSAR} />
+                            <div style={{ flex: 1, minWidth: 300, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 20, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                                    <div style={{ width: 44, height: 44, borderRadius: 14, background: forecast.projected >= GLOBAL_TARGET ? (isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5') : (isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <Clock size={22} color={forecast.projected >= GLOBAL_TARGET ? '#10B981' : '#F59E0B'} />
                                     </div>
-                                    <p style={{ margin: '4px 0 0', fontSize: 13, color: C.muted }}>بمعدل إغلاق يومي {fmtSAR(forecast.dailyAvg)} / يوم</p>
+                                    <div>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0', color: C.text }}>التوقع الذكي لنهاية الشهر</h3>
+                                        <div style={{ fontSize: 22, fontWeight: 900, color: forecast.projected >= GLOBAL_TARGET ? '#10B981' : '#F59E0B', marginTop: 2 }}>
+                                            <AnimatedNumber target={forecast.projected} formatter={fmtSAR} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', padding: 12, borderRadius: 10 }}>
+                                    {forecast.usedHistorical ? (
+                                        <>بناءً على <b>{forecast.daysElapsed}</b> يوم من أصل <b>{forecast.daysInMonth}</b> يوم — مستند على بيانات <b>{forecast.pastMonthsNames}</b>.</>
+                                    ) : forecast.daysElapsed >= 7 ? (
+                                        <>بناءً على متوسط يومي بسيط لعدم توفر بيانات تاريخية كافية.</>
+                                    ) : (
+                                        <>يعتمد على متوسط يومي لأن الشهر لم يتجاوز أسبوعه الأول بعد.</>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -642,9 +702,10 @@ export default function GlobalTarget() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><TrendingUp size={20} color="#10B981" /> مسار تحقيق الهدف - {activeSheetDef?.name}</h3>
                                 </div>
-                                <PerformanceProgressChart data={allData} totalTarget={GLOBAL_TARGET} isDark={isDark} activeSheetName={activeSheetDef?.name} />
+                                <PerformanceProgressChart currentData={allData} allMonthsData={Object.entries(historicData).map(([gid, data]) => ({ name: sheets.find(s => s.gid === gid)?.name, data }))} totalTarget={GLOBAL_TARGET} isDark={isDark} activeSheetName={activeSheetDef?.name} />
                             </div>
                             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 24, flex: 1 }}>
+                                <BestDayWidget data={allData} isDark={isDark} />
                                 <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={20} color="#F59E0B" /> أسرع العقود إغلاقاً</h3>
                                 <FastestDeals data={allData} isDark={isDark} />
                             </div>

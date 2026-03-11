@@ -632,7 +632,7 @@ export default function GlobalTarget() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                         {bdrLeaderboard.map((rep, i) => {
                                             const pct = (rep.total / REP_TARGET) * 100;
-                                            const needsAlert = isCurrentMonth && isLateMonth && pct < 40;
+                                            const needsAlert = isCurrentMonth && activeDaysLeft <= 10 && pct < 40;
                                             const hitTarget = pct >= 100;
                                             return (
                                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

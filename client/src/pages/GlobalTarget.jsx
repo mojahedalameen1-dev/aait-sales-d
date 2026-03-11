@@ -166,12 +166,14 @@ export default function GlobalTarget() {
 
             // Exclude outliers (> 3 * average amount)
             let finalRows = parsedRows;
+            /*
             if (parsedRows.length > 0) {
                 const totalAmt = parsedRows.reduce((sum, r) => sum + r.__amount, 0);
                 const avgAmt = totalAmt / parsedRows.length;
                 const outlierLimit = avgAmt * 3;
                 finalRows = parsedRows.filter(r => r.__amount <= outlierLimit);
             }
+            */
 
             if (!isBackground) {
                 setAllData(finalRows);

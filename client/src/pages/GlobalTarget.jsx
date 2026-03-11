@@ -151,8 +151,8 @@ export default function GlobalTarget() {
 
                 parsedRows.push({
                     '__name': name,
-                    '__amount': netAmount,
-                    '__gross_amount': grossAmount,
+                    '__amount': grossAmount,
+                    '__net_amount': netAmount,
                     '__source': row[prioKey(keys, ['المصدر'])] || '',
                     '__type': row[prioKey(keys, ['نوع المشروع'])] || '',
                     '__sales': row[prioKey(keys, ['مطور اعمال', 'المبيعات'])] || '',
@@ -278,7 +278,8 @@ export default function GlobalTarget() {
     const activeSheetDef = sheets.find(s => s.gid === activeGid);
     const isCurrentMonth = activeSheetDef?.gid === sheets[sheets.length - 1]?.gid; // Dynamically newest month
 
-    const totalAmount = useMemo(() => allData.reduce((s, r) => s + (r.__amount || 0), 0), [allData]);
+    const totalAmount = useMemo(() => allData.reduce((s, r) => s + (r.__net_amount || 0), 0), [allData]);
+    const totalGrossAmount = useMemo(() => allData.reduce((s, r) => s + (r.__amount || 0), 0), [allData]);
     const achievementPct = (totalAmount / GLOBAL_TARGET) * 100;
     const remaining = Math.max(0, GLOBAL_TARGET - totalAmount);
 
@@ -311,7 +312,7 @@ export default function GlobalTarget() {
                     let pUpToDay = 0;
                     let pTotal = 0;
                     pData.forEach(r => {
-                        const amt = r.__amount || 0;
+                        const amt = r.__net_amount || (r.__amount / 1.15) || 0;
                         pTotal += amt;
                         const d = parseDate(r.__date);
                         if (d && d.getDate() <= daysElapsed) {
@@ -612,10 +613,10 @@ export default function GlobalTarget() {
                     {/* ── KPI MINI-CARDS ── */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
                         {[
+                            { icon: <DollarSign size={22} color="#10B981" />, bg: isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5', label: 'صافي المبيعات', val: totalAmount, fmt: fmtSAR },
+                            { icon: <TrendingUp size={22} color="#F59E0B" />, bg: isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7', label: 'المبيعات الشاملة (للفرق)', val: totalGrossAmount, fmt: fmtSAR },
                             { icon: <Briefcase size={22} color="#4F8EF7" />, bg: isDark ? 'rgba(79,142,247,.1)' : '#EFF6FF', label: 'إجمالي العقود', val: allData.length, fmt: v => fmt(Math.round(v)) },
-                            { icon: <DollarSign size={22} color="#10B981" />, bg: isDark ? 'rgba(16,185,129,.1)' : '#D1FAE5', label: 'مجموع المبالغ', val: totalAmount, fmt: fmtSAR },
                             { icon: <User size={22} color="#7C3AED" />, bg: isDark ? 'rgba(124,58,237,.1)' : '#F3E8FF', label: 'المندوبين النشطين', val: uniqueSales.length, fmt: v => fmt(Math.round(v)) },
-                            { icon: <TrendingUp size={22} color="#F59E0B" />, bg: isDark ? 'rgba(245,158,11,.1)' : '#FEF3C7', label: 'متوسط قيمة العقد', val: allData.length ? totalAmount / allData.length : 0, fmt: fmtSAR },
                         ].map((k, i) => (
                             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 24 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

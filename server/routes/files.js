@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('../database');
+const supabase = require('../supabase');
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -19,9 +19,15 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
 
 // Get files for a client
-router.get('/:clientId', (req, res) => {
+router.get('/:clientId', async (req, res) => {
   try {
-    const files = db.prepare('SELECT * FROM files WHERE client_id=? ORDER BY uploaded_at DESC').all(req.params.clientId);
+    const { data: files, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('client_id', req.params.clientId)
+      .order('uploaded_at', { ascending: false });
+
+    if (error) throw error;
     res.json(files);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -29,14 +35,21 @@ router.get('/:clientId', (req, res) => {
 });
 
 // Upload file
-router.post('/:clientId', upload.single('file'), (req, res) => {
+router.post('/:clientId', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'لم يتم رفع أي ملف' });
   try {
-    const result = db.prepare(`
-      INSERT INTO files (client_id, file_name, file_path, file_type_label)
-      VALUES (?, ?, ?, ?)
-    `).run(req.params.clientId, req.file.originalname, req.file.filename, req.body.file_type_label || 'أخرى');
-    const file = db.prepare('SELECT * FROM files WHERE id=?').get(result.lastInsertRowid);
+    const { data: file, error } = await supabase
+      .from('files')
+      .insert([{ 
+        client_id: req.params.clientId, 
+        file_name: req.file.originalname, 
+        file_path: req.file.filename, 
+        file_type_label: req.body.file_type_label || 'أخرى' 
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
     res.json(file);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -44,10 +57,15 @@ router.post('/:clientId', upload.single('file'), (req, res) => {
 });
 
 // Download file
-router.get('/download/:fileId', (req, res) => {
+router.get('/download/:fileId', async (req, res) => {
   try {
-    const file = db.prepare('SELECT * FROM files WHERE id=?').get(req.params.fileId);
-    if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
+    const { data: file, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', req.params.fileId)
+      .single();
+
+    if (error || !file) return res.status(404).json({ error: 'الملف غير موجود' });
     const filePath = path.join(uploadsDir, file.file_path);
     res.download(filePath, file.file_name);
   } catch (err) {
@@ -56,13 +74,24 @@ router.get('/download/:fileId', (req, res) => {
 });
 
 // Delete file
-router.delete('/:fileId', (req, res) => {
+router.delete('/:fileId', async (req, res) => {
   try {
-    const file = db.prepare('SELECT * FROM files WHERE id=?').get(req.params.fileId);
-    if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
+    const { data: file, error: fetchErr } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', req.params.fileId)
+      .single();
+
+    if (fetchErr || !file) return res.status(404).json({ error: 'الملف غير موجود' });
     const filePath = path.join(uploadsDir, file.file_path);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    db.prepare('DELETE FROM files WHERE id=?').run(req.params.fileId);
+    
+    const { error: delErr } = await supabase
+      .from('files')
+      .delete()
+      .eq('id', req.params.fileId);
+
+    if (delErr) throw delErr;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

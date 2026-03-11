@@ -1,11 +1,16 @@
 const express = require('express');
-const db = require('../database');
 const router = express.Router();
+const supabase = require('../supabase');
 
 // Get all meeting preps
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const preps = db.prepare('SELECT * FROM meeting_preps ORDER BY created_at DESC').all();
+    const { data: preps, error } = await supabase
+      .from('meeting_preps')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
     res.json(preps);
   } catch (error) {
     console.error('Error fetching meeting preps:', error);
@@ -14,10 +19,18 @@ router.get('/', (req, res) => {
 });
 
 // Get single meeting prep
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const prep = db.prepare('SELECT * FROM meeting_preps WHERE id = ?').get(req.params.id);
-    if (!prep) return res.status(404).json({ error: 'Meeting prep not found' });
+    const { data: prep, error } = await supabase
+      .from('meeting_preps')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Meeting prep not found' });
+      throw error;
+    }
     res.json(prep);
   } catch (error) {
     console.error('Error fetching meeting prep:', error);
@@ -26,7 +39,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create new meeting prep
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { 
       title, 
@@ -42,13 +55,14 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    const result = db.prepare(`
-      INSERT INTO meeting_preps 
-      (title, client_name, sector, meeting_date, status, idea_raw, tags) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(title, client_name, sector, meeting_date, status, idea_raw, tags);
+    const { data: result, error } = await supabase
+      .from('meeting_preps')
+      .insert([{ title, client_name, sector, meeting_date, status, idea_raw, tags }])
+      .select()
+      .single();
 
-    res.status(201).json({ id: result.lastInsertRowid });
+    if (error) throw error;
+    res.status(201).json({ id: result.id });
   } catch (error) {
     console.error('Error creating meeting prep:', error);
     res.status(500).json({ error: 'Failed to create meeting prep' });
@@ -56,7 +70,7 @@ router.post('/', (req, res) => {
 });
 
 // Update meeting prep
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { 
       title, 
@@ -70,31 +84,29 @@ router.put('/:id', (req, res) => {
     } = req.body;
     
     const id = req.params.id;
+    const updateData = {};
 
-    // Build dynamic update query based on provided fields (for partial auto-saves)
-    const updates = [];
-    const values = [];
+    if (title !== undefined) updateData.title = title;
+    if (client_name !== undefined) updateData.client_name = client_name;
+    if (sector !== undefined) updateData.sector = sector;
+    if (meeting_date !== undefined) updateData.meeting_date = meeting_date;
+    if (status !== undefined) updateData.status = status;
+    if (idea_raw !== undefined) updateData.idea_raw = idea_raw;
+    if (analysis_result !== undefined) updateData.analysis_result = analysis_result;
+    if (tags !== undefined) updateData.tags = tags;
 
-    if (title !== undefined) { updates.push('title = ?'); values.push(title); }
-    if (client_name !== undefined) { updates.push('client_name = ?'); values.push(client_name); }
-    if (sector !== undefined) { updates.push('sector = ?'); values.push(sector); }
-    if (meeting_date !== undefined) { updates.push('meeting_date = ?'); values.push(meeting_date); }
-    if (status !== undefined) { updates.push('status = ?'); values.push(status); }
-    if (idea_raw !== undefined) { updates.push('idea_raw = ?'); values.push(idea_raw); }
-    if (analysis_result !== undefined) { updates.push('analysis_result = ?'); values.push(typeof analysis_result === 'string' ? analysis_result : JSON.stringify(analysis_result)); }
-    if (tags !== undefined) { updates.push('tags = ?'); values.push(tags); }
-
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
        return res.json({ success: true, message: 'No changes provided' });
     }
 
-    updates.push("updated_at = datetime('now')");
-    values.push(id);
+    updateData.updated_at = new Date().toISOString();
 
-    const query = `UPDATE meeting_preps SET ${updates.join(', ')} WHERE id = ?`;
+    const { error } = await supabase
+      .from('meeting_preps')
+      .update(updateData)
+      .eq('id', id);
     
-    db.prepare(query).run(...values);
-    
+    if (error) throw error;
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating meeting prep:', error);
@@ -103,9 +115,10 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete meeting prep
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    db.prepare('DELETE FROM meeting_preps WHERE id = ?').run(req.params.id);
+    const { error } = await supabase.from('meeting_preps').delete().eq('id', req.params.id);
+    if (error) throw error;
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting meeting prep:', error);

@@ -1,19 +1,33 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const supabase = require('../supabase');
 
 // GET Global Dashboard Statistics
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
     try {
-        const clients = db.prepare(`
-      SELECT 
-        c.id, c.client_name, c.sector, c.created_at,
-        d.expected_value, d.payment_percentage, d.stage, d.last_contact_date, d.next_followup_date,
-        s.total_score
-      FROM clients c
-      LEFT JOIN deals d ON d.client_id = c.id
-      LEFT JOIN scores s ON s.client_id = c.id
-    `).all();
+        const { data: clientsRaw, error } = await supabase
+            .from('clients')
+            .select(`
+                id, client_name, sector, created_at,
+                deals!deals_client_id_fkey (expected_value, payment_percentage, stage, last_contact_date, next_followup_date),
+                scores!scores_client_id_fkey (total_score)
+            `);
+
+        if (error) throw error;
+
+        // Flatten data for the existing calculation logic
+        const clients = clientsRaw.map(c => ({
+            id: c.id,
+            client_name: c.client_name,
+            sector: c.sector,
+            created_at: c.created_at,
+            expected_value: c.deals?.[0]?.expected_value || 0,
+            payment_percentage: c.deals?.[0]?.payment_percentage || 0.50,
+            stage: c.deals?.[0]?.stage || 'جديد',
+            last_contact_date: c.deals?.[0]?.last_contact_date || '',
+            next_followup_date: c.deals?.[0]?.next_followup_date || '',
+            total_score: c.scores?.[0]?.total_score || 0
+        }));
 
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();

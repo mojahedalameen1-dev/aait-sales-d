@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
-const db = require('../database');
 const router = express.Router();
+const supabase = require('../supabase');
 
 router.post('/', async (req, res) => {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -15,38 +15,14 @@ router.post('/', async (req, res) => {
 
   try {
     const systemInstruction = `أنت العقل الاستراتيجي (Strategic Brain) لمنظومة Sales Focus AI.
-مهمتك الاستراتيجية: تحويل فكرة العميل إلى تحليل مبيعات احترافي يركز على القيمة (Value) والألم (Pain).
-
-السمات:
-- الشخصية: مستشار مبيعات تقني سعودي خبير، يتحدث بالعامية السعودية البيضاء المهنية المفهومة.
-- التوجه: تحليل مفصل وعميق لنقاط الضعف في الوضع الحالي وإبراز القيمة المضافة للنظام الجديد بكل تفاصيلها.
-- القواعد: رد بصيغة JSON فقط، بدون مقدمات، جمل جريئة ومفصلة، وأسئلة استكشافية عميقة جداً. استخدم مفردات البزنس السعودي (مثل: "حلول"، "أتمتة"، "كفاءة"، "ضبط").
-
-الهيكل:
+أجب بصيغة JSON فقط، بدون مقدمات. استخدم مفردات البزنس السعودي.
+الهيكل المطلوبة:
 {
-  "key_message": "الرسالة الجوهرية (Hook)",
-  "business_analysis": {
-    "main_goal": "الهدف الاستراتيجي",
-    "current_problem": "نقاط الألم",
-    "target_users": ["فئة المستفيدين"],
-    "expected_platforms": ["المنصات"]
-  },
-  "discovery_questions": {
-    "business": ["سؤال بزنس عميق"],
-    "technical": ["سؤال تقني ذكي"],
-    "scope": ["سؤال نطاق العمل"]
-  },
-  "user_journeys": [
-    {
-      "user_type": "نوع المستخدم",
-      "steps": ["خطوات الرحلة الأساسية"]
-    }
-  ],
-  "meeting_plan": {
-    "opening": "جملة الافتتاح",
-    "key_message": "الرسالة الأساسية",
-    "next_step": "الخطوة التالية (CTA)"
-  }
+  "key_message": "...",
+  "business_analysis": { "main_goal": "...", "current_problem": "...", "target_users": [], "expected_platforms": [] },
+  "discovery_questions": { "business": [], "technical": [], "scope": [] },
+  "user_journeys": [ { "user_type": "...", "steps": [] } ],
+  "meeting_plan": { "opening": "...", "key_message": "...", "next_step": "..." }
 }`;
 
     const userPrompt = `الفكرة: ${client_idea}
@@ -75,12 +51,11 @@ router.post('/', async (req, res) => {
       analysis = JSON.parse(analysis);
     }
 
-    // Save to database if client_id provided
+    // Save to Supabase if client_id provided
     if (client_id) {
-      db.prepare(`
-        INSERT INTO meeting_analyses (client_id, client_idea, analysis_result)
-        VALUES (?, ?, ?)
-      `).run(client_id, client_idea, JSON.stringify(analysis));
+      await supabase
+        .from('meeting_analyses')
+        .insert([{ client_id, client_idea, analysis_result: analysis }]);
     }
 
     res.json({ success: true, analysis });
@@ -90,11 +65,16 @@ router.post('/', async (req, res) => {
   }
 });
 
-
 // Get analyses for a client
-router.get('/:clientId', (req, res) => {
+router.get('/:clientId', async (req, res) => {
   try {
-    const analyses = db.prepare('SELECT * FROM meeting_analyses WHERE client_id=? ORDER BY created_at DESC').all(req.params.clientId);
+    const { data: analyses, error } = await supabase
+      .from('meeting_analyses')
+      .select('*')
+      .eq('client_id', req.params.clientId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
     res.json(analyses);
   } catch (err) {
     res.status(500).json({ error: err.message });

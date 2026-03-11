@@ -275,11 +275,11 @@ export function PerformanceProgressChart({ currentData, allMonthsData, totalTarg
     
     const prev1Month = validIdx > 0 ? allMonthsData[validIdx - 1] : null;
     const prev1Line = useMemo(() => getCumulative(prev1Month?.data), [prev1Month]);
-    const prev1Name = prev1Month?.name?.replace(/\D/g, '').trim() || prev1Month?.name?.split(' ')[0] || 'الشهر السابق';
+    const prev1Name = prev1Month?.name || 'الشهر السابق';
 
     const prev2Month = validIdx > 1 ? allMonthsData[validIdx - 2] : null;
     const prev2Line = useMemo(() => getCumulative(prev2Month?.data), [prev2Month]);
-    const prev2Name = prev2Month?.name?.replace(/\D/g, '').trim() || prev2Month?.name?.split(' ')[0] || 'قبل شهرين';
+    const prev2Name = prev2Month?.name || 'قبل شهرين';
 
     const maxVal = Math.max(
         totalTarget,
@@ -311,7 +311,7 @@ export function PerformanceProgressChart({ currentData, allMonthsData, totalTarg
             <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap', fontSize: 13, fontWeight: 600 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: showCurrent ? C.text : C.muted, transition: 'color 0.2s' }}>
                     <input type="checkbox" checked={showCurrent} onChange={e => setShowCurrent(e.target.checked)} style={{ accentColor: C.current, width: 14, height: 14 }} />
-                    <div style={{ width: 12, height: 3, background: showCurrent ? C.current : C.muted, borderRadius: 2 }} /> {activeSheetName?.split(' ')[0] || 'الشهر الحالي'}
+                    <div style={{ width: 12, height: 3, background: showCurrent ? C.current : C.muted, borderRadius: 2 }} /> {activeSheetName || 'الشهر الحالي'}
                 </label>
                 {prev1Month && (
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: showPrev1 ? C.text : C.muted, transition: 'color 0.2s' }}>
@@ -399,7 +399,7 @@ export function PerformanceProgressChart({ currentData, allMonthsData, totalTarg
                         <div style={{ fontSize: 13, fontWeight: 800, color: C.text, marginBottom: 8, borderBottom: `1px solid ${C.border}`, paddingBottom: 6 }}>يوم {hoverDay}</div>
                         {showCurrent && (isCurrentMonth ? hoverDay <= currentDay : true) && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                                <span style={{ color: C.current, fontWeight: 700 }}>{activeSheetName?.split(' ')[0] || 'الحالي'}:</span>
+                                <span style={{ color: C.current, fontWeight: 700 }}>{activeSheetName || 'الحالي'}:</span>
                                 <span style={{ fontWeight: 800, color: C.text }}>{fmt(currentLine[hoverDay-1])}</span>
                             </div>
                         )}

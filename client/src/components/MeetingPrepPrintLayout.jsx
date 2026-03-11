@@ -45,7 +45,7 @@ export default function MeetingPrepPrintLayout({ data }) {
               PREP ID: #{String(id).padStart(4, '0')}
             </div>
             <div style={{ fontWeight: 700, fontSize: '9pt', color: '#666' }}>
-              {new Date().toLocaleDateString('ar-SA')}
+              {`${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${String(new Date().getDate()).padStart(2, '0')}`}
             </div>
             <div style={{ fontSize: '7pt', fontWeight: 700, color: '#aaa', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>
               Strategic Dossier

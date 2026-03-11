@@ -516,7 +516,7 @@ export default function MeetingPrepHub() {
                             </div>
                             <div className="print:text-left print:text-[10pt] print:flex print:flex-col print:items-end">
                               <div className="print:font-black print:bg-black print:text-white print:px-2 print:py-1 print:mb-1">PREP ID: {String(prepData.id).padStart(4, '0')}</div>
-                              <div className="print:font-bold">{new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                              <div className="print:font-bold">{`${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${String(new Date().getDate()).padStart(2, '0')}`}</div>
                               <div className="print:text-[8pt] print:mt-1 print:opacity-70 font-mono">CONFIDENTIAL / نظام سيلز فوكس</div>
                             </div>
                           </div>

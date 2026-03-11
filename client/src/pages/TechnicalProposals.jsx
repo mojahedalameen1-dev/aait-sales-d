@@ -7,6 +7,10 @@ import { API_URL } from '../utils/apiConfig';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// Added for Markdown rendering
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } }
@@ -219,12 +223,56 @@ export default function TechnicalProposals() {
             ) : proposal ? (
               <div
                 id="proposal-content"
+                className="prose prose-invert max-w-none proposal-markdown"
                 style={{
-                  fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '16px', lineHeight: '1.8',
-                  color: textPrimary, whiteSpace: 'pre-wrap', textAlign: 'right', padding: '20px'
+                  fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '15px', lineHeight: '1.8',
+                  color: textPrimary, textAlign: 'right', padding: '10px'
                 }}
               >
-                {proposal}
+                <style>{`
+                  .proposal-markdown table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                    border-radius: 8px;
+                    overflow: hidden;
+                  }
+                  .proposal-markdown th, .proposal-markdown td {
+                    border: 1px solid ${border};
+                    padding: 12px 16px;
+                    text-align: right;
+                  }
+                  .proposal-markdown th {
+                    background-color: ${isDark ? 'rgba(79, 142, 247, 0.15)' : '#EFF6FF'};
+                    color: ${isDark ? '#4F8EF7' : '#1E40AF'};
+                    font-weight: bold;
+                  }
+                  .proposal-markdown tr:nth-child(even) {
+                    background-color: ${isDark ? 'rgba(255, 255, 255, 0.02)' : '#F8FAFF'};
+                  }
+                  .proposal-markdown h1, .proposal-markdown h2, .proposal-markdown h3 {
+                    color: ${textPrimary};
+                    margin-top: 1.5em;
+                    margin-bottom: 0.5em;
+                    font-weight: 700;
+                  }
+                  .proposal-markdown h3 {
+                    color: ${isDark ? '#4F8EF7' : '#2563EB'};
+                  }
+                  .proposal-markdown ul, .proposal-markdown ol {
+                    padding-right: 24px;
+                    margin-bottom: 1em;
+                  }
+                  .proposal-markdown li {
+                    margin-bottom: 0.5em;
+                  }
+                  .proposal-markdown p {
+                    margin-bottom: 1em;
+                  }
+                `}</style>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {proposal}
+                </ReactMarkdown>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: textSecondary, opacity: 0.5, gap: '16px', minHeight: '300px' }}>

@@ -280,8 +280,8 @@ export default function GlobalTarget() {
     const activeSheetDef = sheets.find(s => s.gid === activeGid);
     const isCurrentMonth = activeSheetDef?.gid === sheets[sheets.length - 1]?.gid; // Dynamically newest month
 
-    const totalAmount = useMemo(() => allData.reduce((s, r) => s + (r.__net_amount || 0), 0), [allData]);
-    const totalGrossAmount = useMemo(() => allData.reduce((s, r) => s + (r.__amount || 0), 0), [allData]);
+    const totalAmount = useMemo(() => allData.reduce((s, r) => s + (r.__amount || 0), 0), [allData]);
+    const totalNetAmount = useMemo(() => allData.reduce((s, r) => s + (r.__net_amount || 0), 0), [allData]);
     const achievementPct = (totalAmount / GLOBAL_TARGET) * 100;
     const remaining = Math.max(0, GLOBAL_TARGET - totalAmount);
 
@@ -314,7 +314,7 @@ export default function GlobalTarget() {
                     let pUpToDay = 0;
                     let pTotal = 0;
                     pData.forEach(r => {
-                        const amt = r.__net_amount || (r.__amount / 1.15) || 0;
+                        const amt = r.__amount || (r.__net_amount * 1.15) || 0;
                         pTotal += amt;
                         const d = parseDate(r.__date);
                         if (d && d.getDate() <= daysElapsed) {
@@ -372,7 +372,7 @@ export default function GlobalTarget() {
                 prevData.forEach(r => {
                     const d = parseDate(r.__date);
                     if (d && d.getDate() <= daysElapsed) {
-                        prevUpToDay += (r.__net_amount || 0);
+                        prevUpToDay += (r.__amount || 0);
                     }
                 });
 
@@ -383,7 +383,7 @@ export default function GlobalTarget() {
                     momHtml = (
                         <span style={{ fontSize: 13, fontWeight: 700, color, display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: FONT }}>
                             {momGapPct >= 0 ? <TrendingUp size={14} /> : <TrendingUp size={14} style={{ transform: 'scaleY(-1)' }} />}
-                            {Math.abs(momGapPct).toFixed(1)}% {momGapPct >= 0 ? 'ارتفاع' : 'انخفاض'} عن نفس الفترة في {prevSheet.name.replace(' 2026', '')} (بالصافي)
+                            {Math.abs(momGapPct).toFixed(1)}% {momGapPct >= 0 ? 'ارتفاع' : 'انخفاض'} عن نفس الفترة في {prevSheet.name.replace(' 2026', '')} (بالشامل)
                         </span>
                     );
                 }
@@ -611,8 +611,8 @@ export default function GlobalTarget() {
                     {/* ── KPI MINI-CARDS ── */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
                         {[
-                            { icon: <DollarSign size={22} className="text-emerald-500" />, bgClass: 'bg-emerald-50 dark:bg-emerald-500/10', label: 'صافي المبيعات', val: totalAmount, fmt: fmtSAR },
-                            { icon: <TrendingUp size={22} className="text-amber-500" />, bgClass: 'bg-amber-50 dark:bg-amber-500/10', label: 'المبيعات الشاملة (للفرق)', val: totalGrossAmount, fmt: fmtSAR },
+                            { icon: <DollarSign size={22} className="text-emerald-500" />, bgClass: 'bg-emerald-50 dark:bg-emerald-500/10', label: 'المبيعات الشاملة', val: totalAmount, fmt: fmtSAR },
+                            { icon: <TrendingUp size={22} className="text-amber-500" />, bgClass: 'bg-amber-50 dark:bg-amber-500/10', label: 'صافي المبيعات (بدون ضريبة)', val: totalNetAmount, fmt: fmtSAR },
                             { icon: <Briefcase size={22} className="text-blue-500" />, bgClass: 'bg-blue-50 dark:bg-blue-500/10', label: 'إجمالي العقود', val: allData.length, fmt: v => fmt(Math.round(v)) },
                             { icon: <User size={22} className="text-purple-500" />, bgClass: 'bg-purple-50 dark:bg-purple-500/10', label: 'المندوبين النشطين', val: uniqueSales.length, fmt: v => fmt(Math.round(v)) },
                         ].map((k, i) => (

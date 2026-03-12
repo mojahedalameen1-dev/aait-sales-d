@@ -15,6 +15,9 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsdom": "^28.1.0",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "docxtemplater": "^3.54.0",
+    "pizzip": "^3.1.8",
+    "convertapi": "^1.1.5"
   }
 }

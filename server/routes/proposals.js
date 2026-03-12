@@ -1,7 +1,19 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const PizZip = require('pizzip');
+const Docxtemplater = require('docxtemplater');
+const convertapi = require('convertapi')(process.env.CONVERTAPI_SECRET);
 
+// Ensure temp directory exists
+const tempDir = path.join(__dirname, '..', 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+// AI Proposal Text Generation
 router.post('/', async (req, res) => {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
   const { text } = req.body;
@@ -72,7 +84,6 @@ A. هيكلية المستخدمين (System Actors):
 | مدة العمل | |`;
 
     const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      // Using versatile model as defined in current setup
       model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemInstruction },
@@ -95,6 +106,87 @@ A. هيكلية المستخدمين (System Actors):
       error: 'حدث خطأ أثناء الاتصال بنموذج الذكاء الاصطناعي.',
       details: error.response?.data || error.message
     });
+  }
+});
+
+// Generate DOCX
+router.post('/generate-docx', async (req, res) => {
+  try {
+    const data = req.body;
+    const templatePath = path.join(__dirname, '..', '..', 'templates', 'quotation.docx');
+
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).json({ error: 'ملف القالب غير موجود في templates/quotation.docx' });
+    }
+
+    const content = fs.readFileSync(templatePath, 'binary');
+    const zip = new PizZip(content);
+    
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+    });
+
+    // Render the document
+    doc.render(data);
+
+    const buf = doc.getZip().generate({ type: 'nodebuffer' });
+    
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename=quotation_${Date.now()}.docx`,
+    });
+    
+    res.send(buf);
+  } catch (error) {
+    console.error('Error generating DOCX:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء توليد ملف الوورد.', details: error.message });
+  }
+});
+
+// Generate PDF
+router.post('/generate-pdf', async (req, res) => {
+  const CONVERTAPI_SECRET = process.env.CONVERTAPI_SECRET;
+  if (!CONVERTAPI_SECRET) {
+    return res.status(500).json({ error: 'مفتاح ConvertAPI غير متوفر في الخادم.' });
+  }
+
+  try {
+    const data = req.body;
+    const templatePath = path.join(__dirname, '..', '..', 'templates', 'quotation.docx');
+
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).json({ error: 'ملف القالب غير موجود في templates/quotation.docx' });
+    }
+
+    const content = fs.readFileSync(templatePath, 'binary');
+    const zip = new PizZip(content);
+    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    doc.render(data);
+    const buf = doc.getZip().generate({ type: 'nodebuffer' });
+
+    const docxPath = path.join(tempDir, `template_${Date.now()}.docx`);
+    fs.writeFileSync(docxPath, buf);
+
+    // Convert to PDF
+    const result = await convertapi.convert('pdf', { File: docxPath }, 'docx');
+    const pdfUrl = result.file.url;
+    
+    // Download and send PDF
+    const pdfResponse = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+    
+    // Clean up temporary file
+    fs.unlinkSync(docxPath);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=quotation_${Date.now()}.pdf`,
+    });
+    
+    res.send(Buffer.from(pdfResponse.data));
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء توليد ملف PDF.', details: error.message });
   }
 });
 

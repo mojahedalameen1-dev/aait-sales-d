@@ -13,8 +13,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const isVercel = process.env.VERCEL === '1';
+const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log(`Created uploads directory at: ${uploadsDir}`);
+  }
+} catch (err) {
+  console.error(`Failed to create uploads directory: ${err.message}`);
+}
+
 app.use('/uploads', express.static(uploadsDir));
 
 // Routes

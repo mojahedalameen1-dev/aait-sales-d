@@ -8,9 +8,15 @@ const Docxtemplater = require('docxtemplater');
 const convertapi = require('convertapi')(process.env.CONVERTAPI_SECRET);
 
 // Ensure temp directory exists
-const tempDir = path.join(__dirname, '..', 'temp');
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir, { recursive: true });
+const isVercel = process.env.VERCEL === '1';
+const tempDir = isVercel ? path.join('/tmp', 'temp') : path.join(__dirname, '..', 'temp');
+
+try {
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+} catch (err) {
+  console.error('Failed to create temp directory:', err.message);
 }
 
 // AI Proposal Text Generation

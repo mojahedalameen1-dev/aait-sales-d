@@ -6,9 +6,14 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables!');
+  console.error('❌ CRITICAL: Missing Supabase environment variables! Queries will fail.');
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase;
+try {
+  supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder');
+} catch (err) {
+  console.error('❌ Failed to initialize Supabase client:', err.message);
+}
 
 module.exports = supabase;

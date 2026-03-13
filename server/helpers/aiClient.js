@@ -20,7 +20,15 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
     throw new Error('GEMINI_API_KEY_MISSING');
   }
 
-  const promptText = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+  // Fix double-escaped characters from JSON serialization
+  let promptText = typeof prompt === 'string'
+    ? prompt
+    : JSON.stringify(prompt, null, 0);
+
+  promptText = promptText
+    .replace(/\\\\n/g, '\n')
+    .replace(/\\\\t/g, '\t')
+    .replace(/\\\\r/g, '');
 
   for (const modelName of models) {
     try {
@@ -53,6 +61,12 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
 
     } catch (error) {
       const status = error.response?.status;
+
+      // Log full Google error details for debugging
+      if (error.response?.data) {
+        console.error(`📋 Google API Error Details:`, JSON.stringify(error.response.data));
+      }
+
       const isRateLimit = status === 429 ||
         error.message?.includes('429') ||
         error.message?.includes('Resource has been exhausted') ||

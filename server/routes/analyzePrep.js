@@ -11,18 +11,18 @@ router.post('/', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) {
     console.error('Environment Check - GEMINI_API_KEY is missing');
     return res.status(500).json({ 
-      error: 'مفتاح Gemini API غير متوفر في الخادم.',
+      error: '\u0645\u0641\u062a\u0627\u062d Gemini API \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631 \u0641\u064a \u0627\u0644\u062e\u0627\u062f\u0645.',
     });
   }
 
-  if (!idea_raw || !title) {
-    return res.status(400).json({ error: 'العنوان وفكرة العميل مطلوبان للتحليل.' });
+  if (!title || !idea_raw) {
+    return res.status(400).json({ error: '\u062c\u0645\u064a\u0631 \u0627\u0644\u062d\u0642\u0648\u0644 \u0645\u0637\u0644\u0648\u0628\u0629' });
   }
 
   try {
-    const systemInstruction = `أنت العقل الاستراتيجي (Strategic Brain) لمنظومة Sales Focus AI.
-أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودي.
-الهيكل المطلوب:
+    const systemInstruction = `\u0623\u0646\u062a \u0627\u0644\u0639\u0642\u0644 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a (Strategic Brain) \u0644\u0645\u0646\u0638\u0648\u0645\u0629 Sales Focus AI.
+\u0623\u062c\u0628 \u0628\u0635\u064a\u063a\u0629 JSON \u0641\u0642\u0637 \u0648\u0628\u062f\u0642\u0629 \u0645\u062a\u0646\u0627\u0647\u064a\u0629 \u0648\u0628\u062f\u0648\u0646 \u0645\u0642\u062f\u0645\u0627\u062a. \u0627\u0633\u062a\u062e\u062f\u0645 \u0645\u0641\u0631\u062f\u0627\u062a \u0627\u0644\u0628\u0632\u0646\u0633 \u0627\u0644\u0633\u0639\u0648\u062f\u064a.
+\u0627\u0644\u0647\u064a\u0643\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628:
 {
   "key_message": "...",
   "business_analysis": { "main_goal": "...", "current_problem": "...", "target_users": [], "expected_platforms": [] },
@@ -31,13 +31,13 @@ router.post('/', async (req, res) => {
   "user_journeys": [ { "user_type": "...", "steps": [] } ]
 }`;
 
-    const userPrompt = `بيانات الاجتماع:
-- العنوان: ${title}
-- العميل: ${client_name || 'غير محدد'}
-- القطاع: ${sector || 'تجارة'}
-- الفكرة: ${idea_raw}
+    const userPrompt = `\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0627\u062c\u062a\u0645\u0627\u0639:
+- \u0627\u0644\u0639\u0646\u0648\u0627\u0646: ${title}
+- \u0627\u0644\u0639\u0645\u064a\u0644: ${client_name || '\u063a\u064a\u0631 \u0645\u062d\u062f\u062f'}
+- \u0627\u0644\u0642\u0637\u0627\u0639: ${sector || '\u062a\u062c\u0627\u0631\u0629'}
+- \u0627\u0644\u0641\u0643\u0631\u0629: ${idea_raw}
 
-نفذ التحليل الاستراتيجي الآن وقدم التقرير بصيغة JSON.`;
+\u0646\u0641\u0630 \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a \u0627\u0644\u0622\u0646 \u0648\u0642\u062f\u0645 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0628\u0635\u064a\u063a\u0629 JSON.`;
 
     let analysisText = await generateWithFallback({
       prompt: userPrompt,
@@ -47,18 +47,14 @@ router.post('/', async (req, res) => {
 
     let analysis = JSON.parse(analysisText);
 
-    // Save to Supabase if prep_id provided
     if (prep_id) {
-       await supabase
-         .from('meeting_preps')
-         .update({ 
-           analysis_result: analysis, 
-           updated_at: new Date().toISOString() 
-         })
-         .eq('id', prep_id);
+      await supabase
+        .from('meeting_preps')
+        .update({ analysis_result: analysis })
+        .eq('id', prep_id);
     }
 
-    res.json(analysis);
+    res.json({ success: true, analysis });
 
   } catch (error) {
     console.error('Analysis error:', error);
@@ -71,7 +67,7 @@ router.post('/', async (req, res) => {
     }
 
     res.status(500).json({ 
-      error: 'فشل تحليل التحضير عبر الذكاء الاصطناعي',
+      error: '\u0641\u0634\u0644 \u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u062a\u062d\u0636\u064a\u0631 \u0639\u0628\u0631 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a',
       details: error.message,
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
       failedAt: 'AI Waterfall Analysis'
@@ -80,5 +76,3 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
-
-

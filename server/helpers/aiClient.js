@@ -76,8 +76,9 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
         console.error(`📋 DeepSeek API Error Details:`, JSON.stringify(error.response.data));
       }
 
-      const isRateLimit = status === 429 ||
+      const isRateLimit = status === 429 || status === 402 ||
         error.message?.includes('429') ||
+        error.message?.includes('402') ||
         error.message?.includes('balance is insufficient') ||
         error.message?.includes('Insufficient Balance');
 
@@ -92,7 +93,7 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
   }
 
   const exhaustionError = new Error('ALL_MODELS_EXHAUSTED');
-  exhaustionError.message = 'خدمة الذكاء الاصطناعي مشغولة حالياً أو الرصيد غير كافٍ. الرجاء المحاولة مجدداً بعد دقيقتين.';
+  exhaustionError.message = '\u062e\u062f\u0645\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u0645\u0634\u0631\u0641\u0629 \u062d\u0627\u0644\u064a\u0627\u064b \u0623\u0648 \u0627\u0644\u0631\u0635\u064a\u062f \u063a\u064a\u0631 \u0643\u0627\u0641\u064d (DeepSeek Balance Empty). \u0627\u0644\u0631\u062c\u0627\u0621 \u0634\u062d\u0646 \u0627\u0644\u0631\u0635\u064a\u062f \u0641\u064a DeepSeek.';
   exhaustionError.retryAfter = 120;
   throw exhaustionError;
 }

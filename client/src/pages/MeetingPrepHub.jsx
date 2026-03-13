@@ -221,7 +221,7 @@ export default function MeetingPrepHub() {
       console.log('AI Analysis Result:', data);
 
       // Update local state with the result stringified for the renderer block
-      setPrepData(prev => ({ ...prev, analysis_result: JSON.stringify(data) }));
+      setPrepData(prev => ({ ...prev, analysis_result: JSON.stringify(data.analysis) }));
       addToast('تم التوليد بنجاح ✨', 'success');
     } catch (e) {
       console.error('handleAnalyze Catch:', e);

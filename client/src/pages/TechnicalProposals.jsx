@@ -105,6 +105,7 @@ export default function TechnicalProposals() {
       
       if (aiStructuredData) {
         setStructuredData({
+          ...aiStructuredData,
           strategicGoals: aiStructuredData.strategicGoals || [],
           actors: aiStructuredData.actors || [],
           features: aiStructuredData.features || [],

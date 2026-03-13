@@ -54,6 +54,22 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Debug Status (Environmental check for Vercel/Production)
+app.get('/api/debug-status', (req, res) => {
+  res.json({
+    status: 'checking',
+    env: process.env.NODE_ENV || 'not set',
+    isVercel: process.env.VERCEL === '1',
+    config: {
+      supabaseUrl: !!process.env.SUPABASE_URL,
+      supabaseAnonKey: !!process.env.SUPABASE_ANON_KEY,
+      geminiKey: !!process.env.GEMINI_API_KEY,
+      port: process.env.PORT || 'default 5000'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`✅ Sales Focus Server running on http://localhost:${PORT}`);

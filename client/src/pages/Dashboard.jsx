@@ -68,8 +68,18 @@ export default function Dashboard() {
         fetch(API_URL('/api/dashboard/stats')).then(r => r.json()),
         fetch(API_URL('/api/clients')).then(r => r.json())
       ]);
-      setStats(statsRes);
-      setClients(clientsRes);
+      
+      if (statsRes && !statsRes.error) {
+        setStats(statsRes);
+      } else {
+        addToast(statsRes?.error || 'خطأ في تحميل إحصائيات لوحة القيادة', 'error');
+      }
+
+      if (Array.isArray(clientsRes)) {
+        setClients(clientsRes);
+      } else if (clientsRes && clientsRes.error) {
+         addToast(clientsRes.error, 'error');
+      }
     } catch (e) {
       addToast('خطأ في تحميل بيانات لوحة القيادة', 'error');
     } finally {

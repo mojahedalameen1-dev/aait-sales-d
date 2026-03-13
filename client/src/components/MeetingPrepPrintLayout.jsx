@@ -228,7 +228,7 @@ export default function MeetingPrepPrintLayout({ data }) {
 
         {/* Footer */}
         <div style={{ paddingTop: '40px', textAlign: 'center', fontSize: '9pt', fontWeight: 700, color: '#bbb' }}>
-          Generated automatically by Sales Focus – Intelligence Hub (Groq Engine V1.0.0)<br/>
+          Generated automatically by Sales Focus – Intelligence Hub (Gemini 2.0 Flash Engine V2.0.0)<br/>
           © {new Date().getFullYear()} Sales Focus Platform. All rights reserved.
         </div>
       </div>

@@ -51,7 +51,13 @@ export default function ClientsList({ filter }) {
       const res = await fetch(API_URL('/api/clients'));
       if (res.ok) {
         const data = await res.json();
-        setClients(data);
+        if (Array.isArray(data)) {
+          setClients(data);
+        } else {
+          console.error('Clients API returned non-array:', data);
+          setClients([]);
+          addToast(data.error || 'خطأ في استلام بيانات العملاء', 'error');
+        }
       } else {
         throw new Error('Failed to fetch clients');
       }

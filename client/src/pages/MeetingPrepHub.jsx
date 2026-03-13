@@ -69,9 +69,15 @@ export default function MeetingPrepHub() {
     try {
       const res = await fetch(API_URL('/api/meeting-preps'));
       const data = await res.json();
-      setPreps(data);
-      if (data.length > 0 && !activePrepId) {
-        handleSelectPrep(data[0].id);
+      if (Array.isArray(data)) {
+        setPreps(data);
+        if (data.length > 0 && !activePrepId) {
+          handleSelectPrep(data[0].id);
+        }
+      } else {
+        console.error('API returned non-array:', data);
+        setPreps([]);
+        addToast(data.error || 'خطأ في استلام البيانات من الخادم', 'error');
       }
     } catch (e) {
       addToast('خطأ في تحميل قائمة التحضيرات', 'error');
@@ -676,17 +682,17 @@ export default function MeetingPrepHub() {
                           <div className="flex items-center gap-2 text-sm font-medium" style={{ color: textSecondary }}>
                             <Sparkles size={16} className="text-blue-500" />
                             <span>تم إنشاء هذه الاستراتيجية بواسطة المحرك:</span>
-                            <span className="font-black text-emerald-500 bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/10">Groq / Llama 3.3 (70B)</span>
+                            <span className="font-black text-emerald-500 bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/10">Google / Gemini 2.0 Flash</span>
                           </div>
                           <div className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8f9fa', color: textMuted, border: `1px solid ${border}` }}>
-                            إصدار المحرك: V1.0.0 - Groq Engine
+                            إصدار المحرك: V2.0.0 - Gemini Flash Engine
                           </div>
                         </div>
                       </div>
 
                       {/* Print Footer */}
                       <div className="print-footer print-only">
-                        هذا التقرير تم توليده بواسطة Sales Focus AI - مدعوم بمحرك Groq / Llama 3.3 - سرية المعلومات محفوظة.
+                        هذا التقرير تم توليده بواسطة Sales Focus AI - مدعوم بمحرك Gemini 2.0 Flash - سرية المعلومات محفوظة.
                       </div>
                     </div>
                   );

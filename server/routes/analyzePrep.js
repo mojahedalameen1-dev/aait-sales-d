@@ -9,7 +9,15 @@ router.post('/', async (req, res) => {
   const { prep_id, title, client_name, sector, idea_raw } = req.body;
 
   if (!GEMINI_API_KEY) {
-    return res.status(500).json({ error: 'مفتاح Gemini API غير متوفر في الخادم.' });
+    console.error('Environment Check - GEMINI_API_KEY is missing');
+    return res.status(500).json({ 
+      error: 'مفتاح Gemini API غير متوفر في الخادم.',
+      debug_info: {
+        has_env_var: !!process.env.GEMINI_API_KEY,
+        node_env: process.env.NODE_ENV,
+        env_keys: Object.keys(process.env).filter(k => k.includes('API') || k.includes('KEY')).join(', ')
+      }
+    });
   }
 
   if (!idea_raw || !title) {

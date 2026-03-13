@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Presentation, Search, Plus, Calendar, MapPin, Briefcase,
   Sparkles, CheckCircle2, ChevronRight, Filter, ExternalLink, Printer,
-  ListChecks, Map as MapIcon, CalendarDays, Trash2, Edit3, Users
+  ListChecks, Map as MapIcon, CalendarDays, Trash2, Edit3, Users,
+  Settings, ClipboardList, BarChart3
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
@@ -48,7 +49,7 @@ export default function MeetingPrepHub() {
   const [showDelete, setShowDelete] = useState(false);
 
   // Tabs State
-  const [activeTab, setActiveTab] = useState('info'); // 'info', 'questions', 'journey', 'strategy'
+  const [activeTab, setActiveTab] = useState('info'); // 'info', 'strategy', 'admin', 'questions', 'journey'
 
   // Form states (synced with prepData)
   const [formData, setFormData] = useState({});
@@ -440,9 +441,10 @@ export default function MeetingPrepHub() {
               {prepData.analysis_result && !isAnalyzing && prepData.analysis_result !== '{}' && (
                 <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 mb-6 no-print" style={{ borderBottom: `1px solid ${border}` }}>
                   {[
-                    { id: 'info', label: '📋 معلومات الاجتماع' },
+                    { id: 'info', label: '📋 فكرة المشروع' },
                     { id: 'strategy', label: '📝 الرسالة الاستراتيجية' },
-                    { id: 'questions', label: '❓ الأسئلة الاستكشافية' },
+                    { id: 'admin', label: '⚙️ لوحة التحكم' },
+                    { id: 'questions', label: '❓ منطق العمل' },
                     { id: 'journey', label: '🗺️ رحلة المستخدم' }
                   ].map(tab => (
                     <button
@@ -535,21 +537,23 @@ export default function MeetingPrepHub() {
 
                           {/* Business Summary & Platforms */}
                           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-8 print:grid-cols-2 print:gap-8 avoid-break">
-                            <div className="glass-card avoid-break p-6 md:p-7 xl:col-span-3 print:col-span-1 print:border-none print:shadow-none print:p-0">
                               <h4 className="text-lg font-extrabold mb-5 flex items-center gap-2" style={{ color: '#4F8EF7' }}>
-                                <Briefcase size={20} /> فهم المشروع والأهداف
+                                <Briefcase size={20} /> فكرة المشروع والميزات
                               </h4>
                               <div className="flex flex-col gap-5">
                                 <div className="p-4 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFF' }}>
-                                  <span className="font-extrabold block mb-2" style={{ color: textPrimary }}>الهدف التجاري:</span>
-                                  <span className="text-sm leading-relaxed" style={{ color: textSecondary }}>{analysis.business_analysis?.main_goal}</span>
+                                  <span className="font-extrabold block mb-2" style={{ color: textPrimary }}>ملخص الفكرة:</span>
+                                  <span className="text-sm leading-relaxed" style={{ color: textSecondary }}>{analysis.project_idea?.summary || analysis.business_analysis?.main_goal}</span>
                                 </div>
                                 <div>
-                                  <span className="font-extrabold block mb-2" style={{ color: textPrimary }}>المشكلة الحالية:</span>
-                                  <span className="text-sm leading-relaxed" style={{ color: textSecondary }}>{analysis.business_analysis?.current_problem}</span>
+                                  <span className="font-extrabold block mb-2" style={{ color: textPrimary }}>الميزات الأساسية (Core Features):</span>
+                                  <ul className="list-disc pr-5 flex flex-col gap-2">
+                                    {(analysis.project_idea?.core_features || []).map((feat, i) => (
+                                      <li key={i} className="text-sm" style={{ color: textSecondary }}>{feat}</li>
+                                    ))}
+                                  </ul>
                                 </div>
                               </div>
-                            </div>
 
                             <div className="glass-card avoid-break p-6 md:p-7 xl:col-span-2 print:col-span-1 print:border-none print:shadow-none print:p-0">
                               <h4 className="text-lg font-extrabold mb-5 flex items-center gap-2" style={{ color: '#7C3AED' }}>
@@ -606,36 +610,73 @@ export default function MeetingPrepHub() {
                         </>
                       )}
 
+                      {/* PAGE: Admin Panel (Tab: admin) */}
+                      {activeTab === 'admin' && (
+                        <div className="glass-card avoid-break overflow-hidden mb-8 p-0 mt-4">
+                          <div className="px-6 py-5 md:px-8 md:py-6 border-b" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#F5F3FF', borderColor: border }}>
+                            <h4 className="text-lg md:text-xl font-extrabold flex items-center gap-3" style={{ color: '#7C3AED' }}>
+                              <Settings size={24} /> لوحة الإدارة والتحكم (Admin Panel)
+                            </h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse" style={{ borderColor: border }}>
+                            {[
+                              { key: 'user_management', label: 'إدارة المستخدمين والصلاحيات', icon: <Users size={18}/> },
+                              { key: 'operations_management', label: 'إدارة العمليات والطلبات', icon: <ClipboardList size={18}/> },
+                              { key: 'settings_content', label: 'الإعدادات والمحتوى', icon: <Settings size={18}/> },
+                              { key: 'financial_reports', label: 'التقارير المالية والتشغيلية', icon: <BarChart3 size={18}/> }
+                            ].map((sec, idx) => (
+                              <div key={idx} style={{ padding: '32px', borderLeft: (idx % 2 === 0) ? `1px solid ${border}` : 'none', borderBottom: idx < 2 ? `1px solid ${border}` : 'none' }}>
+                                <h5 style={{ fontSize: '16px', fontWeight: 800, color: '#7C3AED', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {sec.icon} {sec.label}
+                                </h5>
+                                <ul style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                  {(analysis.admin_panel?.[sec.key] || []).map((item, i) => (
+                                    <li key={i} style={{ display: 'flex', gap: '12px', fontSize: '14px', color: textSecondary, alignItems: 'center' }}>
+                                      <div style={{ width: '6px', height: '6px', background: '#7C3AED', borderRadius: '50%' }} />
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* PAGE 2: DISCOVERY & QUESTIONS (Tab: questions) */}
                       {activeTab === 'questions' && (
                         <>
                           <div className="page-break-before hidden print:block"></div>
                           <div className="glass-card avoid-break overflow-hidden mb-8 p-0 mt-4">
                             <div className="px-6 py-5 md:px-8 md:py-6 border-b" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#F9FBFF', borderColor: border }}>
-                              <h4 className="text-lg md:text-xl font-extrabold flex items-center gap-3" style={{ color: '#7C3AED' }}>
-                                <ListChecks size={24} /> الأسئلة الاستكشافية الموصى بها
+                              <h4 className="text-lg md:text-xl font-extrabold flex items-center gap-3" style={{ color: '#4F8EF7' }}>
+                                <ListChecks size={24} /> أسئلة لتحديد الـ Workflow والمنهجية التقنية
                               </h4>
                             </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse" style={{ borderColor: border }}>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse" style={{ borderColor: border }}>
                               {[
-                                { key: 'business', label: 'الوعي بالبزنس', color: '#4F8EF7' },
-                                { key: 'technical', label: 'المتطلبات التقنية', color: '#7C3AED' },
-                                { key: 'scope', label: 'النطاق والميزانية', color: '#F59E0B' }
-                              ].map((cat, idx) => (
-                                <div key={cat.key} style={{ padding: '32px', borderLeft: idx !== 2 ? `1px solid ${border}` : 'none' }}>
-                                  <h5 style={{ fontSize: '16px', fontWeight: 800, color: cat.color, marginBottom: '24px', paddingBottom: '12px', borderBottom: `2px solid ${cat.color}22` }}>
-                                    {cat.label}
-                                  </h5>
-                                  <ul style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    {analysis.discovery_questions?.[cat.key]?.map((q, i) => (
-                                      <li key={i} style={{ display: 'flex', gap: '16px', fontSize: '15px', lineHeight: '1.6', color: textSecondary }}>
-                                        <span style={{ color: cat.color, fontWeight: 900, background: `${cat.color}15`, padding: '4px 8px', borderRadius: '8px', height: 'fit-content' }}>Q</span>
-                                        <span style={{ paddingTop: '2px' }}>{q}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ))}
+                                { key: 'workflows', label: 'سير العمليات (Workflows)', color: '#4F8EF7' },
+                                { key: 'edge_cases', label: 'الحالات الاستثنائية (Edge Cases)', color: '#EF4444' },
+                                { key: 'integrations', label: 'الربط الخارجي (Integrations)', color: '#7C3AED' },
+                                { key: 'permissions', label: 'الاعتمادات والصلاحيات', color: '#F59E0B' }
+                              ].map((cat, idx) => {
+                                const questions = analysis.technical_workflow_questions?.[cat.key] || analysis.discovery_questions?.[cat.key] || [];
+                                return (
+                                  <div key={cat.key} style={{ padding: '32px', borderLeft: idx % 2 === 0 ? `1px solid ${border}` : 'none', borderBottom: idx < 2 ? `1px solid ${border}` : 'none' }}>
+                                    <h5 style={{ fontSize: '16px', fontWeight: 800, color: cat.color, marginBottom: '24px', paddingBottom: '12px', borderBottom: `2px solid ${cat.color}22` }}>
+                                      {cat.label}
+                                    </h5>
+                                    <ul style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                      {questions.map((q, i) => (
+                                        <li key={i} style={{ display: 'flex', gap: '16px', fontSize: '15px', lineHeight: '1.6', color: textSecondary }}>
+                                          <span style={{ color: cat.color, fontWeight: 900, background: `${cat.color}15`, padding: '4px 8px', borderRadius: '8px', height: 'fit-content' }}>Q</span>
+                                          <span style={{ paddingTop: '2px' }}>{q}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         </>
@@ -648,26 +689,44 @@ export default function MeetingPrepHub() {
                           <div className="flex items-center gap-3 text-xl md:text-2xl font-black mb-6 mt-4 avoid-break" style={{ color: textPrimary }}>
                             <MapIcon size={28} color="#F59E0B" /> مخططات رحلة المستخدم (نظرة شاملة)
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 print:grid-cols-2 print:gap-8 avoid-break">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 print:grid-cols-2 print:gap-8 avoid-break">
                             {analysis.user_journeys?.map((j, idx) => (
                               <div key={idx} className="glass-card avoid-break p-6 md:p-8" style={{ background: isDark ? 'rgba(245, 158, 11, 0.02)' : '#FFFEFA', borderTop: '4px solid #F59E0B' }}>
                                 <div style={{ display: 'inline-block', padding: '8px 16px', background: '#F59E0B15', color: '#F59E0B', borderRadius: '8px', fontSize: '14px', fontWeight: 800, marginBottom: '28px' }}>
                                   {j.user_type}
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  {j.steps?.map((step, sidx) => (
-                                    <div key={sidx} style={{ display: 'flex', gap: '20px' }}>
-                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '28px' }}>
-                                        <div style={{ width: '28px', height: '28px', background: isDark ? '#1A2540' : '#fff', border: '3px solid #F59E0B', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
-                                          <span style={{ fontSize: '11px', fontWeight: 900, color: '#F59E0B' }}>{sidx + 1}</span>
-                                        </div>
-                                        {sidx !== j.steps.length - 1 && <div style={{ width: '3px', flex: 1, background: 'linear-gradient(to bottom, #F59E0B, #F59E0B22)', margin: '-2px 0' }} />}
-                                      </div>
-                                      <div style={{ paddingBottom: sidx !== j.steps.length - 1 ? '32px' : '0', paddingTop: '2px', fontSize: '16px', color: textSecondary, fontWeight: 600, lineHeight: '1.6' }}>
-                                        {step}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                  {[
+                                    { label: 'البداية والتسجيل (Onboarding)', key: 'onboarding' },
+                                    { label: 'الرحلة الأساسية (Core)', key: 'core_journey' },
+                                    { label: 'تفاعل النظام (System)', key: 'system_actions' },
+                                    { label: 'نهاية الرحلة', key: 'end_of_journey' }
+                                  ].map((section, sidx) => (j[section.key] && (
+                                    <div key={sidx}>
+                                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#F59E0B', display: 'block', marginBottom: '10px', opacity: 0.8 }}>{section.label}</span>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {(Array.isArray(j[section.key]) ? j[section.key] : [j[section.key]]).map((step, stepId) => (
+                                          <div key={stepId} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                            <div style={{ width: '6px', height: '6px', background: '#F59E0B', borderRadius: '50%', marginTop: '8px', flexShrink: 0 }} />
+                                            <p style={{ fontSize: '14px', color: textSecondary, lineHeight: '1.5', margin: 0 }}>{step}</p>
+                                          </div>
+                                        ))}
                                       </div>
                                     </div>
-                                  ))}
+                                  )))}
+                                  {/* Fallback for old structure if exists */}
+                                  {j.steps && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                      {j.steps.map((step, sidx) => (
+                                        <div key={sidx} style={{ display: 'flex', gap: '12px' }}>
+                                          <div style={{ width: '20px', height: '20px', background: '#F59E0B22', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#F59E0B' }}>{sidx + 1}</span>
+                                          </div>
+                                          <p style={{ fontSize: '14px', color: textSecondary, margin: 0 }}>{step}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -682,17 +741,17 @@ export default function MeetingPrepHub() {
                           <div className="flex items-center gap-2 text-sm font-medium" style={{ color: textSecondary }}>
                             <Sparkles size={16} className="text-blue-500" />
                             <span>تم إنشاء هذه الاستراتيجية بواسطة المحرك:</span>
-                            <span className="font-black text-emerald-500 bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/10">Google / Gemini 2.0 Flash</span>
+                            <span className="font-black text-emerald-500 bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/10">DeepSeek / Chat-Reasoner</span>
                           </div>
                           <div className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8f9fa', color: textMuted, border: `1px solid ${border}` }}>
-                            إصدار المحرك: V2.0.0 - Gemini Flash Engine
+                            إصدار المحرك: V2.1.0 - DeepSeek Intelligence
                           </div>
                         </div>
                       </div>
 
                       {/* Print Footer */}
                       <div className="print-footer print-only">
-                        هذا التقرير تم توليده بواسطة Sales Focus AI - مدعوم بمحرك Gemini 2.0 Flash - سرية المعلومات محفوظة.
+                        هذا التقرير تم توليده بواسطة Sales Focus AI - مدعوم بمحرك DeepSeek - سرية المعلومات محفوظة.
                       </div>
                     </div>
                   );

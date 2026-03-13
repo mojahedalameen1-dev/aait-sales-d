@@ -20,24 +20,64 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const systemInstruction = `\u0623\u0646\u062a \u0627\u0644\u0639\u0642\u0644 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a (Strategic Brain) \u0644\u0645\u0646\u0638\u0648\u0645\u0629 Sales Focus AI.
-\u0623\u062c\u0628 \u0628\u0635\u064a\u063a\u0629 JSON \u0641\u0642\u0637 \u0648\u0628\u062f\u0642\u0629 \u0645\u062a\u0646\u0627\u0647\u064a\u0629 \u0648\u0628\u062f\u0648\u0646 \u0645\u0642\u062f\u0645\u0627\u062a. \u0627\u0633\u062a\u062e\u062f\u0645 \u0645\u0641\u0631\u062f\u0627\u062a \u0627\u0644\u0628\u0632\u0646\u0633 \u0627\u0644\u0633\u0639\u0648\u062f\u064a.
-\u0627\u0644\u0647\u064a\u0643\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628:
+    const systemInstruction = `أنت الحين تشتغل كـ "محلل أعمال تقني" (Business Analyst) و "مدير منتجات" (Product Manager) خبرة في شركة سعودية رائدة لتطوير التطبيقات والمواقع.
+الهدف: أنا زميلك بالشركة، وأبيك تفزع لي في التجهيز لاجتماعات العملاء (Discovery Meetings). بعطيك فكرة مبدئية لتطبيق أو موقع طلبها العميل، وأبيك بناءً عليها تجهز لي "تقرير تحضيري مفصل" أبيض فيه وجهي قدام العميل.
+
+أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودية (البيضاء).
+
+الهيكل المطلوب للـ JSON:
 {
-  "key_message": "...",
-  "business_analysis": { "main_goal": "...", "current_problem": "...", "target_users": [], "expected_platforms": [] },
-  "meeting_plan": { "opening": "...", "next_step": "..." },
-  "discovery_questions": { "business": [], "technical": [], "scope": [] },
-  "user_journeys": [ { "user_type": "...", "steps": [] } ]
+  "key_message": "الرسالة الاستراتيجية الكبرى (الزبدة)",
+  "project_idea": {
+    "summary": "شرح الفكرة بطريقة سلسة وواضحة جداً",
+    "core_features": ["ميزة 1", "ميزة 2"]
+  },
+  "business_analysis": {
+    "main_goal": "الهدف التجاري الأساسي",
+    "current_problem": "المشكلة اللي يحلها المشروع",
+    "target_users": ["فئة 1", "فئة 2"],
+    "expected_platforms": ["iOS", "Android", "Web"]
+  },
+  "user_journeys": [
+    {
+      "user_type": "نوع المستخدم (مثلاً: عميل)",
+      "onboarding": ["خطوة تسجيل 1", "خطوة تسجيل 2"],
+      "core_journey": ["خطوة أساسية 1", "خطوة أساسية 2"],
+      "system_actions": ["إجراء تقني 1", "إشعارات/تحديثات"],
+      "end_of_journey": ["التقييم/الفواتير/الإغلاق"]
+    }
+  ],
+  "admin_panel": {
+    "user_management": ["صلاحيات", "حظر", "توثيق"],
+    "operations_management": ["تتبع", "قبول/رفض", "تعديل"],
+    "settings_content": ["إشعارات", "رسوم", "صفحات ثابتة"],
+    "financial_reports": ["تحويلات", "إحصائيات", "مبالغ"]
+  },
+  "meeting_plan": {
+    "key_message": "نفس الرسالة الاستراتيجية الكبرى للتوافق",
+    "opening": "جملة افتتاحية احترافية",
+    "next_step": "الهدف التالي من الاجتماع (CTA)"
+  },
+  "technical_workflow_questions": {
+    "workflows": ["سؤال عن منطق العمل 1", "سؤال عن الاعتماد"],
+    "edge_cases": ["ماذا لو كنسل؟", "فشل الدفع؟"],
+    "integrations": ["بوابات دفع", "ERP", "خرائط"],
+    "permissions": ["مشرفين", "صلاحيات محدودة"]
+  },
+  "discovery_questions": {
+     "business": ["سؤال بزنس 1"],
+     "technical": ["سؤال تقني 1"],
+     "scope": ["سؤال عن النطاق"]
+  }
 }`;
 
-    const userPrompt = `\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0627\u062c\u062a\u0645\u0627\u0639:
-- \u0627\u0644\u0639\u0646\u0648\u0627\u0646: ${title}
-- \u0627\u0644\u0639\u0645\u064a\u0644: ${client_name || '\u063a\u064a\u0631 \u0645\u062d\u062f\u062f'}
-- \u0627\u0644\u0642\u0637\u0627\u0639: ${sector || '\u062a\u062c\u0627\u0631\u0629'}
-- \u0627\u0644\u0641\u0643\u0631\u0629: ${idea_raw}
+    const userPrompt = `بيانات الاجتماع:
+- العنوان: ${title}
+- العميل: ${client_name || 'غير محدد'}
+- القطاع: ${sector || 'تجارة'}
+- الفكرة: ${idea_raw}
 
-\u0646\u0641\u0630 \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a \u0627\u0644\u0622\u0646 \u0648\u0642\u062f\u0645 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0628\u0635\u064a\u063a\u0629 JSON.`;
+نفذ التحليل الاستراتيجي الآن وقدم التقرير بصيغة JSON بالعامية السعودية الاحترافية.`;
 
     let analysisText = await generateWithFallback({
       prompt: userPrompt,

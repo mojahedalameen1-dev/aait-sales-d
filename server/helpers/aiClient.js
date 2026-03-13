@@ -9,7 +9,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
  * @returns {Promise<string>} - The generated text response
  */
 async function generateWithFallback({ prompt, systemInstruction, responseMimeType }) {
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const models = [
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-pro'
+  ];
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
   if (!GEMINI_API_KEY) {

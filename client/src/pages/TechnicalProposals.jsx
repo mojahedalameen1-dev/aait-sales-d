@@ -112,8 +112,10 @@ export default function TechnicalProposals() {
       return;
     }
 
-    const query = new URLSearchParams({ text: formData.meetingNotes }).toString();
-    startStream(API_URL(`/api/proposals/stream?${query}`));
+    startStream(API_URL('/api/proposals/stream'), {
+      method: 'POST',
+      body: { text: formData.meetingNotes }
+    });
   };
 
 

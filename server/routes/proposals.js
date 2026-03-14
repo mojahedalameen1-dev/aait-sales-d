@@ -180,8 +180,8 @@ router.post('/generate-docx', async (req, res) => {
   }
 });
 
-router.get('/stream', async (req, res) => {
-  const { text } = req.query;
+router.post('/stream', async (req, res) => {
+  const { text } = req.body;
   const apiKey = process.env.DEEPSEEK_API_KEY;
 
   if (!apiKey) {

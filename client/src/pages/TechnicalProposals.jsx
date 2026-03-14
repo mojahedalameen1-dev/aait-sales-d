@@ -66,8 +66,10 @@ export default function TechnicalProposals() {
 
       if (jsonMatch) {
         try {
+          // Extract data from the first match
           aiStructuredData = JSON.parse(jsonMatch[1]);
-          cleanProposal = fullText.replace(jsonMatch[0], '').trim();
+          // Strip ALL json code blocks from the visible text
+          cleanProposal = fullText.replace(/```json[\s\S]*?```/g, '').trim();
         } catch (e) {
           console.error('Failed to parse AI JSON:', e);
         }

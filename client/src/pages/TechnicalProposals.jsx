@@ -26,7 +26,7 @@ export default function TechnicalProposals() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [exportingDocx, setExportingDocx] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [exportingDocx, setExportingDocx] = useState(false);
   const processedResultRef = React.useRef(null);
 
   // Form State
@@ -264,20 +264,9 @@ export default function TechnicalProposals() {
           <div className="glass-card p-6 flex-1 flex flex-col min-h-[600px]" style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '24px' }}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-                  <button 
-                    onClick={() => setEditMode(false)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!editMode ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    معاينة
-                  </button>
-                  <button 
-                    onClick={() => setEditMode(true)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${editMode ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    تعديل
-                  </button>
-                </div>
+                  <div className="flex bg-white/5 p-2 rounded-xl border border-white/10 text-xs font-bold text-blue-400">
+                    تعديل العرض الفني
+                  </div>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleExport('docx')} disabled={exportingDocx || !formData.proposalText}
@@ -312,7 +301,7 @@ export default function TechnicalProposals() {
                   <FileText size={80} className="mb-4" />
                   <p>البيانات المولدة ستظهر هنا بعد التحليل</p>
                 </div>
-              ) : editMode ? (
+              ) : (
                 <textarea
                   name="proposalText"
                   value={formData.proposalText}
@@ -320,26 +309,6 @@ export default function TechnicalProposals() {
                   className="w-full h-full bg-transparent text-right text-gray-200 leading-relaxed outline-none resize-none font-mono text-sm"
                   placeholder="يمكنك تعديل محتوى العرض هنا..."
                 />
-              ) : (
-                <div id="proposal-content" className="prose prose-invert max-w-none text-right">
-                  <div className="mb-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-                    <h3 className="text-blue-400 font-bold mb-2">بيانات القالب المستخرجة:</h3>
-                    <div className="grid grid-cols-2 gap-y-2 text-xs">
-                      <div><span className="opacity-50">الأهداف:</span> {structuredData.strategicGoals.length}</div>
-                      <div><span className="opacity-50">الفئات:</span> {structuredData.actors.length}</div>
-                    </div>
-                  </div>
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    className="prose prose-invert max-w-none text-right 
-                      prose-table:w-full prose-table:border-collapse prose-table:my-6
-                      prose-th:border prose-th:border-white/10 prose-th:bg-white/5 prose-th:p-3 prose-th:text-blue-400
-                      prose-td:border prose-td:border-white/10 prose-td:p-3 prose-td:text-gray-300
-                      prose-headings:text-blue-400 prose-p:text-gray-300 prose-li:text-gray-300"
-                  >
-                    {formData.proposalText}
-                  </ReactMarkdown>
-                </div>
               )}
             </div>
           </div>

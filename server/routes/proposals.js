@@ -33,7 +33,7 @@ router.post('/generate-docx', async (req, res) => {
       projectDescription: data.projectDescription || '',
       revenueModel: data.revenueModel || '',
       workflow: Array.isArray(data.workflow) 
-        ? data.workflow.map((s, i) => `${i + 1}- ${s}`).join('\n') 
+        ? data.workflow.map((s, i) => `الخطوة ${i + 1}: ${s}`).join('\n') 
         : (data.workflow || ''),
       technicalAssessment: data.technicalAssessment || '',
       estimatedCost: data.estimatedCost || '',
@@ -68,7 +68,7 @@ router.post('/generate-docx', async (req, res) => {
     
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename=quotation_${Date.now()}.docx`,
+      'Content-Disposition': `attachment; filename="proposal_${encodeURIComponent(data.clientName || 'client')}_${Date.now()}.docx"`,
     });
     
     res.send(buf);

@@ -212,7 +212,7 @@ export default function TechnicalProposals() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `proposal_${formData.clientName}_${Date.now()}.docx`;
+      a.download = `العرض الفني والمالي - ${formData.clientName}.docx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

@@ -27,10 +27,30 @@ export default function GlobalTarget() {
     const { isDark } = useTheme();
     const { addToast } = useToast();
 
-    // The single source of truth for all colors
-    const C = isDark
-        ? { bg: '#080E1B', card: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.07)', text: '#F0F4FF', muted: '#7A869A', inputBg: 'rgba(255,255,255,0.04)', glow: 'rgba(79,142,247,0.1)' }
-        : { bg: '#F8FAFC', card: '#F1F5F9', border: '#E2E8F0', text: '#1E293B', muted: '#475569', inputBg: '#FFFFFF', glow: 'rgba(79,142,247,0.08)' };
+    // The single source of truth for all colors - aligned with tailwind.config.js
+    const C = useMemo(() => isDark
+        ? {
+            bg: '#080E1B',
+            card: 'rgba(255,255,255,0.025)',
+            border: 'rgba(255,255,255,0.07)',
+            text: '#F0F4FF',
+            muted: '#7A869A',
+            accent: '#4F8EF7',
+            secondary: '#7C3AED',
+            inputBg: 'rgba(255,255,255,0.04)',
+            glow: 'rgba(79,142,247,0.1)'
+        }
+        : {
+            bg: '#F8FAFC',
+            card: '#F1F5F9',
+            border: '#E2E8F0',
+            text: '#1E293B',
+            muted: '#475569',
+            accent: '#4F8EF7',
+            secondary: '#7C3AED',
+            inputBg: '#FFFFFF',
+            glow: 'rgba(79,142,247,0.08)'
+        }, [isDark]);
 
     /* ── state ── */
     const [sheets, setSheets] = useState([]);

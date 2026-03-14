@@ -40,6 +40,11 @@ router.post('/', async (req, res) => {
 
     let analysis = JSON.parse(analysisText);
 
+    // Ensure analysis structure is valid to prevent frontend _.map errors
+    if (!analysis.discovery_questions) analysis.discovery_questions = { business: [], technical: [], scope: [] };
+    if (!analysis.user_journeys) analysis.user_journeys = [];
+    if (!Array.isArray(analysis.user_journeys)) analysis.user_journeys = [];
+
     if (client_id) {
       await supabase
         .from('meeting_preps')
@@ -82,7 +87,12 @@ router.get('/:clientId', async (req, res) => {
     if (error) throw error;
     res.json(analyses);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Fetch analysis error:', err);
+    res.status(500).json({ 
+      error: 'حدث خطأ أثناء تحميل تحليلات العميل',
+      details: err.message,
+      code: err.code
+    });
   }
 });
 

@@ -115,4 +115,141 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/stream/:id', async (req, res) => {
+  const prep_id = req.params.id;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'DeepSeek API Key missing' });
+  }
+
+  // Setup SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const sendEvent = (type, data) => {
+    res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`);
+  };
+
+  try {
+    sendEvent('start', { message: 'جاري جلب بيانات التحضير...' });
+
+    // 1. Fetch data from Supabase
+    const { data: prep, error: fetchError } = await supabase
+      .from('meeting_preps')
+      .select('*')
+      .eq('id', prep_id)
+      .single();
+
+    if (fetchError || !prep) {
+      throw new Error('فشل العثور على بيانات التحضير');
+    }
+
+    const systemInstruction = `أنت الحين تشتغل كـ "محلل أعمال تقني" (Business Analyst) و "مدير منتجات" (Product Manager) خبرة في شركة سعودية رائدة لتطوير التطبيقات والمواقع.
+الهدف: أنا زميلك بالشركة، وأبيك تفزع لي في التجهيز لاجتماعات العملاء (Discovery Meetings). بعطيك فكرة مبدئية لتطبيق أو موقع طلبها العميل، وأبيك بناءً عليها تجهز لي "تقرير تحضيري مفصل جداً واحترافي" أبيض فيه وجهي قدام العميل.
+
+أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودية (البيضاء) الفخمة.
+
+الهيكل المطلوب للـ JSON:
+{
+  "project_idea": { "summary": "...", "core_features": [] },
+  "business_analysis": { "main_goal": "...", "current_problem": "...", "target_users": [], "expected_platforms": [] },
+  "user_journeys": [ { "user_type": "...", "onboarding": [], "core_journey": [], "system_actions": [], "end_of_journey": [] } ],
+  "admin_panel": { "user_management": [], "operations_management": [], "settings_content": [], "financial_reports": [] },
+  "meeting_plan": { "opening": "...", "next_step": "..." },
+  "technical_workflow_questions": { "workflows": [], "edge_cases": [], "integrations": [], "permissions": [] },
+  "discovery_questions": { "business": [], "technical": [], "scope": [] }
+}`;
+
+    const userPrompt = `بيانات الاجتماع:
+- العنوان: ${prep.title}
+- العميل: ${prep.client_name || 'غير محدد'}
+- القطاع: ${prep.sector || 'تجارة'}
+- الفكرة: ${prep.idea_raw}
+
+نفذ التحليل الاستراتيجي الآن وقدم التقرير بصيغة JSON بالعامية السعودية الاحترافية.`;
+
+    sendEvent('progress', { value: 5, message: 'بدء الاتصال بالذكاء الاصطناعي...' });
+
+    // 2. DeepSeek Streaming Request
+    const url = 'https://api.deepseek.com/chat/completions';
+    const response = await axios.post(url, {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: userPrompt }
+      ],
+      stream: true,
+      temperature: 0.7,
+      response_format: { type: 'json_object' }
+    }, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      responseType: 'stream'
+    });
+
+    let fullText = '';
+    let tokenCount = 0;
+    const stream = response.data;
+
+    stream.on('data', chunk => {
+      const lines = chunk.toString().split('\n').filter(line => line.trim() !== '');
+      for (const line of lines) {
+        const message = line.replace(/^data: /, '');
+        if (message === '[DONE]') break;
+        try {
+          const parsed = JSON.parse(message);
+          const content = parsed.choices[0].delta.content;
+          if (content) {
+            fullText += content;
+            tokenCount++;
+            
+            // Send progress every 8 tokens
+            if (tokenCount % 8 === 0) {
+              const realProgress = Math.min(92, 5 + Math.round((tokenCount / 800) * 87));
+              sendEvent('progress', { 
+                value: realProgress, 
+                tokens: tokenCount,
+                message: 'جاري توليد التقرير التحليلي...' 
+              });
+            }
+          }
+        } catch (e) {
+          // Skip parse errors for non-json lines
+        }
+      }
+    });
+
+    stream.on('end', async () => {
+      try {
+        const cleaned = fullText.trim().replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        const result = JSON.parse(cleaned);
+
+        // Update Database
+        await supabase
+          .from('meeting_preps')
+          .update({ analysis_result: result })
+          .eq('id', prep_id);
+
+        sendEvent('progress', { value: 100, message: 'اكتمل التحليل بنجاح ✨' });
+        sendEvent('result', { data: result });
+        res.end();
+      } catch (err) {
+        sendEvent('error', { message: 'فشل في تحليل النتيجة النهائية' });
+        res.end();
+      }
+    });
+
+  } catch (err) {
+    console.error('Streaming error:', err);
+    sendEvent('error', { message: err.message || 'حدث خطأ تقني في البث' });
+    res.end();
+  }
+});
+
 module.exports = router;

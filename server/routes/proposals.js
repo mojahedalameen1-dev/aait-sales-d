@@ -251,4 +251,94 @@ router.post('/generate-pdf', async (req, res) => {
   }
 });
 
+router.get('/stream', async (req, res) => {
+  const { text } = req.query;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'DeepSeek API Key missing' });
+  }
+
+  // Setup SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const sendEvent = (type, data) => {
+    res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`);
+  };
+
+  try {
+    sendEvent('start', { message: 'جاري البدء في صياغة العرض الفني...' });
+
+    const systemInstruction = `أنت خبير تقني واستراتيجي متخصص في إعداد العروض الفنية الاحترافية للمشاريع البرمجية. مهمتك تحويل تفريغ الاجتماع المرفق إلى عرض فني متكامل وجاهز للعرض على العميل مباشرةً.
+
+## نموذج العرض الفني (يجب الالتزام بهذا الهيكل حرفياً)
+### نموذج العمل المقترح (Business Logic)
+... (بقية الهيكل) ...
+بعد الانتهاء من النص أعلاه، أضف فوراً كتلة JSON برمجية تحتوي على البيانات المهيكلة...`;
+
+    sendEvent('progress', { value: 10, message: 'تحليل المتطلبات الفنية...' });
+
+    // DeepSeek Streaming Request
+    const url = 'https://api.deepseek.com/chat/completions';
+    const response = await axios.post(url, {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: text }
+      ],
+      stream: true,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      responseType: 'stream'
+    });
+
+    let fullText = '';
+    let tokenCount = 0;
+    const stream = response.data;
+
+    stream.on('data', chunk => {
+      const lines = chunk.toString().split('\n').filter(line => line.trim() !== '');
+      for (const line of lines) {
+        const message = line.replace(/^data: /, '');
+        if (message === '[DONE]') break;
+        try {
+          const parsed = JSON.parse(message);
+          const content = parsed.choices[0].delta.content;
+          if (content) {
+            fullText += content;
+            tokenCount++;
+            
+            if (tokenCount % 12 === 0) {
+              const realProgress = Math.min(95, 10 + Math.round((tokenCount / 1200) * 85));
+              sendEvent('progress', { 
+                value: realProgress, 
+                message: 'جاري كتابة بنود العرض الفني...' 
+              });
+            }
+          }
+        } catch (e) {}
+      }
+    });
+
+    stream.on('end', () => {
+      sendEvent('progress', { value: 100, message: 'تم تجهيز العرض بالكامل ✨' });
+      sendEvent('result', { proposal: fullText });
+      res.end();
+    });
+
+  } catch (err) {
+    console.error('Streaming error:', err);
+    sendEvent('error', { message: err.message || 'حدث خطأ في بث العرض' });
+    res.end();
+  }
+});
+
 module.exports = router;

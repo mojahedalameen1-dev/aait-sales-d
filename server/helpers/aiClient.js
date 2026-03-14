@@ -54,6 +54,9 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
         body.response_format = { type: 'json_object' };
       }
 
+      const startTime = Date.now();
+      console.log(`🚀 DeepSeek request started | model: ${modelName} | tokens: ${promptText.length} chars`);
+
       const response = await axios.post(url, body, {
         headers: { 
           'Content-Type': 'application/json',
@@ -64,6 +67,9 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
 
       const text = response.data?.choices?.[0]?.message?.content;
       if (!text) throw new Error('Empty response from DeepSeek API');
+
+      const duration = Date.now() - startTime;
+      console.log(`⏱️ DeepSeek response time: ${duration}ms | output: ${text.length} chars`);
 
       console.log(`✅ Success with model: ${modelName}`);
       return text;

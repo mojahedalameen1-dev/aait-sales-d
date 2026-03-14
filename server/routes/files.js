@@ -35,12 +35,17 @@ router.get('/:clientId', async (req, res) => {
       .eq('client_id', req.params.clientId)
       .order('uploaded_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST204' || error.code === 'PGRST205') {
+        return res.status(200).json([]); // Return empty array if table doesn't exist yet, to avoid frontend crash
+      }
+      throw error;
+    }
     res.json(files);
   } catch (err) {
     console.error('Fetch files error:', err);
     let errorMsg = 'حدث خطأ أثناء تحميل ملفات العميل';
-    if (err.code === 'PGRST205') {
+    if (err.code === 'PGRST205' || err.code === 'PGRST204') {
       errorMsg = 'جدول الملفات (files) مفقود في قاعدة البيانات. يرجى إنشاؤه.';
     }
     res.status(500).json({ 

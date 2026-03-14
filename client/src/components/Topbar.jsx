@@ -60,6 +60,7 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
               background: 'transparent', border: 'none', color: textPrimary, cursor: 'pointer',
               marginRight: '-8px' // Align nicely with edge
             }}
+            aria-label="فتح القائمة الجانبية"
           >
             <Menu size={24} />
           </button>
@@ -80,6 +81,7 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           className="relative w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-800 dark:text-slate-200 cursor-pointer transition-colors duration-200"
+          aria-label="عرض الإشعارات"
         >
           <Bell size={20} />
           {dueTodayDeals.length > 0 && (

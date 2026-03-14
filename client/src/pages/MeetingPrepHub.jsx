@@ -12,6 +12,8 @@ import { API_URL } from '../utils/apiConfig';
 import SkeletonLoader from '../components/SkeletonLoader';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { formatDate } from '../utils/formatDate';
+import { useStreamAnalysis } from '../hooks/useStreamAnalysis';
+import AnalysisLoader from '../components/AnalysisLoader';
 
 const SECTORS = ['تجارة', 'مطاعم وضيافة', 'خدمات', 'تعليم', 'صحي', 'عقارات', 'صناعي', 'حكومي', 'أخرى'];
 const STATUSES = ['مسودة', 'جاهز', 'منتهي'];
@@ -45,8 +47,16 @@ export default function MeetingPrepHub() {
 
   const [activePrepId, setActivePrepId] = useState(null);
   const [prepData, setPrepData] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+
+  const { progress, message, result, status, startStream } = useStreamAnalysis();
+
+  // Update prepData when streaming is done
+  useEffect(() => {
+    if (status === 'done' && result) {
+      setPrepData(prev => ({ ...prev, analysis_result: JSON.stringify(result) }));
+    }
+  }, [status, result]);
 
   // Tabs State
 
@@ -188,9 +198,6 @@ export default function MeetingPrepHub() {
       return addToast('يرجى إدخال عنوان الاجتماع وفكرة العميل أولاً', 'info');
     }
 
-    setIsAnalyzing(true);
-    console.log('Starting AI Analysis for prep:', activePrepId);
-
     // Force immediate save of pending idea
     try {
       await performAutoSave(activePrepId, { idea_raw: formData.idea_raw });
@@ -198,37 +205,7 @@ export default function MeetingPrepHub() {
       console.warn('Pre-analysis save failed, continuing anyway...', e);
     }
 
-    try {
-      const res = await fetch(API_URL('/api/analyze-prep'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prep_id: activePrepId,
-          title: formData.title,
-          client_name: formData.client_name,
-          sector: formData.sector,
-          idea_raw: formData.idea_raw
-        })
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
-        console.error('Analysis API Error:', errorData);
-        throw new Error(errorData.error || `Server responded with ${res.status}`);
-      }
-
-      const data = await res.json();
-      console.log('AI Analysis Result:', data);
-
-      // Update local state with the result stringified for the renderer block
-      setPrepData(prev => ({ ...prev, analysis_result: JSON.stringify(data.analysis) }));
-      addToast('تم التوليد بنجاح ✨', 'success');
-    } catch (e) {
-      console.error('handleAnalyze Catch:', e);
-      addToast(e.message || 'فشل التحليل. تأكد من اتصال الإنترنت ومن إعدادات المفتاح.', 'error');
-    } finally {
-      setIsAnalyzing(false);
-    }
+    startStream(API_URL(`/api/analyze-prep/stream/${activePrepId}`));
   }
 
   async function handlePrint() {
@@ -265,7 +242,7 @@ export default function MeetingPrepHub() {
           <h2 style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '20px', fontWeight: 800, color: textPrimary, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Presentation size={22} color="#4F8EF7" /> التحضيرات
           </h2>
-          <button className="btn-primary" onClick={handleCreateNew} style={{ padding: '8px 16px', fontSize: '13px' }}>
+          <button className="btn-primary" onClick={handleCreateNew} style={{ padding: '8px 16px', fontSize: '13px' }} aria-label="إنشاء تحضير اجتماع جديد">
             <Plus size={16} /> جديد
           </button>
         </div>
@@ -378,8 +355,10 @@ export default function MeetingPrepHub() {
               <div className="glass-card no-print p-4 md:p-6 mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-5">
                   <div className="lg:col-span-2">
-                    <label className="block text-sm font-semibold mb-2" style={{ color: textSecondary }}>عنوان الاجتماع</label>
-                    <input className="form-input text-lg font-bold" value={formData.title} onChange={e => handleInfoChange('title', e.target.value)} placeholder="مثال: ورشة عمل مع وزارة الصحة" />
+                    <label className="block text-sm font-semibold mb-2" style={{ color: textSecondary }}>
+                      عنوان الاجتماع <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <input className="form-input text-lg font-bold" value={formData.title} onChange={e => handleInfoChange('title', e.target.value)} placeholder="مثال: ورشة عمل مع وزارة الصحة" required />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-2" style={{ color: textSecondary }}>الحالة</label>
@@ -420,7 +399,9 @@ export default function MeetingPrepHub() {
                   <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #4F8EF7, #7C3AED)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                     <Sparkles size={20} />
                   </div>
-                  <h3 style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '20px', fontWeight: 800 }}>بيانات العميل والفكرة</h3>
+                  <h3 style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: '20px', fontWeight: 800 }}>
+                    بيانات العميل والفكرة <span style={{ color: '#EF4444' }}>*</span>
+                  </h3>
                 </div>
                 <textarea
                   className="form-input"
@@ -428,18 +409,23 @@ export default function MeetingPrepHub() {
                   value={formData.idea_raw}
                   onChange={e => handleIdeaChange(e.target.value)}
                   rows={5}
+                  required
                   style={{ fontSize: '16px', lineHeight: '1.7', marginBottom: '24px', background: isDark ? 'rgba(0,0,0,0.2)' : '#fff' }}
                 />
-                <button className="btn-primary" onClick={handleAnalyze} disabled={isAnalyzing} style={{ minWidth: '220px', height: '54px', fontSize: '16px', fontWeight: 700 }}>
-                  {isAnalyzing ? 'جاري التحليل بعناية...' : 'توليد خطة الاجتماع ✨'}
+                <button 
+                  className="btn-primary" 
+                  onClick={handleAnalyze} 
+                  disabled={status === 'loading'} 
+                  style={{ minWidth: '220px', height: '54px', fontSize: '16px', fontWeight: 700 }}
+                  aria-label={status === 'loading' ? 'جاري التحليل' : 'توليد خطة الاجتماع بالذكاء الاصطناعي'}
+                >
+                  {status === 'loading' ? 'جاري التحليل بعناية...' : 'توليد خطة الاجتماع ✨'}
                 </button>
               </div>
 
-              {isAnalyzing && <div className="no-print"><SkeletonLoader type="ai_analysis" /></div>}
+              {status === 'loading' && <AnalysisLoader progress={progress} message={message} />}
 
-
-
-              {prepData.analysis_result && !isAnalyzing && (() => {
+              {prepData.analysis_result && status !== 'loading' && (() => {
                 try {
                   const analysis = typeof prepData.analysis_result === 'string'
                     ? JSON.parse(prepData.analysis_result)
@@ -487,7 +473,7 @@ export default function MeetingPrepHub() {
                           <div className="lg:col-span-2">
                             <div className="p-6 rounded-2xl mb-8" style={{ background: isDark ? 'rgba(79, 142, 247, 0.05)' : '#F0F7FF', border: `1px solid ${border}` }}>
                               <span className="font-black block mb-4 text-lg" style={{ color: textPrimary }}>ملخص الفكرة والرؤية:</span>
-                              <p className="text-base leading-relaxed" style={{ color: textSecondary, whiteSpace: 'pre-wrap' }}>
+                              <p className="text-base leading-relaxed" style={{ color: textSecondary, whiteSpace: 'pre-wrap' }} dir="auto">
                                 {analysis.project_idea?.summary || analysis.business_analysis?.main_goal}
                               </p>
                             </div>
@@ -497,7 +483,7 @@ export default function MeetingPrepHub() {
                                 {(analysis.project_idea?.core_features || []).map((feat, i) => (
                                   <div key={i} className="flex gap-3 items-start p-4 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#F9FBFF', border: `1px solid ${border}` }}>
                                     <CheckCircle2 size={18} className="mt-1 flex-shrink-0" style={{ color: '#4F8EF7' }} />
-                                    <span className="text-sm font-bold" style={{ color: textSecondary }}>{feat}</span>
+                                    <span className="text-sm font-bold" style={{ color: textSecondary }} dir="auto">{feat}</span>
                                   </div>
                                 ))}
                               </div>
@@ -548,7 +534,7 @@ export default function MeetingPrepHub() {
                           </div>
                           <div style={{ padding: '24px', background: isDark ? 'rgba(16,185,129,0.1)' : '#ECFDF5', borderRadius: '16px', border: '1px dashed #10B981' }}>
                             <span style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', marginBottom: '12px' }}>الخطوة القادمة (Call to Action)</span>
-                            <p style={{ fontSize: '16px', fontWeight: 700, color: textPrimary }}>{analysis.meeting_plan?.next_step}</p>
+                             <p style={{ fontSize: '16px', fontWeight: 700, color: textPrimary }} dir="auto">{analysis.meeting_plan?.next_step}</p>
                           </div>
                         </div>
                       </div>
@@ -573,7 +559,7 @@ export default function MeetingPrepHub() {
                               </h5>
                               <ul className="flex flex-col gap-3">
                                 {(analysis.admin_panel?.[sec.key] || []).map((item, i) => (
-                                  <li key={i} className="flex gap-2 items-start text-sm" style={{ color: textSecondary }}>
+                                  <li key={i} className="flex gap-2 items-start text-sm" style={{ color: textSecondary }} dir="auto">
                                     <div style={{ width: '6px', height: '6px', background: '#7C3AED', borderRadius: '50%', marginTop: '6px', flexShrink: 0 }} />
                                     {item}
                                   </li>
@@ -608,7 +594,7 @@ export default function MeetingPrepHub() {
                                   {questions.map((q, i) => (
                                     <li key={i} className="flex gap-4 items-start">
                                       <span style={{ color: cat.color, fontWeight: 900, background: `${cat.color}15`, padding: '4px 8px', borderRadius: '8px', fontSize: '12px' }}>Q</span>
-                                      <span style={{ fontSize: '14px', fontWeight: 600, color: textSecondary, lineHeight: '1.6' }}>{q}</span>
+                                      <span style={{ fontSize: '14px', fontWeight: 600, color: textSecondary, lineHeight: '1.6' }} dir="auto">{q}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -641,7 +627,7 @@ export default function MeetingPrepHub() {
                                     {(Array.isArray(j[section.key]) ? j[section.key] : [j[section.key]]).map((step, stepId) => (
                                       <div key={stepId} className="flex gap-3 items-start">
                                         <div style={{ width: '6px', height: '6px', background: '#F59E0B', borderRadius: '50%', marginTop: '6px', flexShrink: 0 }} />
-                                        <p style={{ fontSize: '14px', fontWeight: 600, color: textSecondary, lineHeight: '1.5', margin: 0 }}>{step}</p>
+                                        <p style={{ fontSize: '14px', fontWeight: 600, color: textSecondary, lineHeight: '1.5', margin: 0 }} dir="auto">{step}</p>
                                       </div>
                                     ))}
                                   </div>

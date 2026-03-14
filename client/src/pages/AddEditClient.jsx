@@ -200,13 +200,16 @@ export default function AddEditClient() {
           <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="glass-card p-5 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>اسم العميل أو الجهة</label>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>
+                  اسم العميل أو الجهة <span style={{ color: '#EF4444' }}>*</span>
+                </label>
                 <input
                   className="form-input"
                   style={{ fontSize: '17px', padding: '16px' }}
                   placeholder="مثال: شركة الصناعات المتقدمة"
                   value={form.client_name}
                   onChange={e => set('client_name', e.target.value)}
+                  required
                 />
                 {errors.client_name && <div style={{ color: '#EF4444', fontSize: '12px', marginTop: '6px' }}><AlertTriangle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: '4px' }} /> {errors.client_name}</div>}
               </div>
@@ -263,12 +266,15 @@ export default function AddEditClient() {
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="glass-card p-5 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>اسم الصفقة</label>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>
+                  اسم الصفقة <span style={{ color: '#EF4444' }}>*</span>
+                </label>
                 <input
                   className="form-input"
                   placeholder="مثال: توريد نظام نقاط البيع لجميع الفروع"
                   value={form.deal_name}
                   onChange={e => set('deal_name', e.target.value)}
+                  required
                 />
                 {errors.deal_name && <div style={{ color: '#EF4444', fontSize: '12px', marginTop: '6px' }}>{errors.deal_name}</div>}
               </div>

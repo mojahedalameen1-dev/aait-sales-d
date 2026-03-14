@@ -90,6 +90,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="absolute top-8 left-4 w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200 transition-colors z-10"
+            aria-label={actualCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'}
           >
             {actualCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
@@ -98,7 +99,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
         {/* Logo */}
         <div className={`transition-all duration-300 ${actualCollapsed ? 'pt-8 pb-6 px-4' : 'pt-8 pb-6 px-6'}`}>
           <motion.div className="flex items-center gap-3.5 rtl">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] flex items-center justify-center shadow-lg shadow-[#4F8EF7]/30 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] flex items-center justify-center shadow-lg shadow-[#4F8EF7]/30 shrink-0" title="Sales Focus Logo">
               <Zap size={24} color="white" fill="white" />
             </div>
             {!actualCollapsed && (
@@ -120,14 +121,14 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
             const isActive = exact ? location.pathname === to : location.pathname.startsWith(to) && to !== '/';
 
             return (
-              <NavLink key={to} to={to} className="relative block group">
+              <NavLink key={to} to={to} className="relative block group" aria-label={label}>
                 <motion.div
                   onClick={() => { if (isMobile) setIsMobileOpen(false); }}
                   whileHover={{ x: actualCollapsed ? 0 : -4 }}
                   whileTap={{ scale: 0.98 }}
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-[14px] direction-rtl font-['IBM_Plex_Sans_Arabic'] text-[15px] transition-all duration-300 relative z-10 ${isActive ? 'font-semibold text-white' : 'font-medium text-slate-600 dark:text-slate-400 group-hover:bg-slate-50 dark:group-hover:bg-white/5'} ${actualCollapsed ? 'justify-center' : 'justify-start'}`}
                 >
-                  <Icon size={20} className={`shrink-0 ${isActive ? 'opacity-100' : 'opacity-70'}`} />
+                  <Icon size={20} className={`shrink-0 ${isActive ? 'opacity-100' : 'opacity-70'}`} aria-hidden="true" />
                   {!actualCollapsed && (
                     <div className="flex items-center justify-between w-full">
                       <motion.span initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} className="whitespace-nowrap">
@@ -172,6 +173,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
           <button
             onClick={toggleTheme}
             className="w-full flex items-center bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 rounded-full p-1 cursor-pointer relative h-11 overflow-hidden"
+            aria-label={isDark ? 'التبديل إلى الوضع المضيء' : 'التبديل إلى الوضع المظلم'}
           >
             {/* Background Slider */}
             <motion.div

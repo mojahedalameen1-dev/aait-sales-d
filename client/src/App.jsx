@@ -4,16 +4,19 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/ToastProvider';
 import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import ClientsList from './pages/ClientsList';
-import ClientDetail from './pages/ClientDetail';
-import AddEditClient from './pages/AddEditClient';
-import MeetingPrepHub from './pages/MeetingPrepHub';
-import PrintPrepPage from './pages/PrintPrepPage';
-import Pipeline from './pages/Pipeline';
-import TechnicalProposals from './pages/TechnicalProposals';
-import GlobalTarget from './pages/GlobalTarget';
 import Topbar from './components/Topbar';
+
+// Lazy load pages
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const ClientsList = React.lazy(() => import('./pages/ClientsList'));
+const ClientDetail = React.lazy(() => import('./pages/ClientDetail'));
+const AddEditClient = React.lazy(() => import('./pages/AddEditClient'));
+const MeetingPrepHub = React.lazy(() => import('./pages/MeetingPrepHub'));
+const PrintPrepPage = React.lazy(() => import('./pages/PrintPrepPage'));
+const Pipeline = React.lazy(() => import('./pages/Pipeline'));
+const TechnicalProposals = React.lazy(() => import('./pages/TechnicalProposals'));
+const GlobalTarget = React.lazy(() => import('./pages/GlobalTarget'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 const PageWrapper = ({ children }) => (
   <motion.div
@@ -82,23 +85,29 @@ export default function App() {
 
             {/* Dynamic Padding Container */}
             <div className={`flex-1 ${isPrint ? 'p-0' : 'p-4 md:p-6 lg:p-8'}`}>
-              <AnimatePresence mode="wait">
-                <Routes location={location} key={location.pathname}>
-                  <Route path="/" element={<PageWrapper><Dashboard /></PageWrapper>} />
-                  <Route path="/pipeline" element={<PageWrapper><Pipeline /></PageWrapper>} />
-                  <Route path="/proposals" element={<PageWrapper><TechnicalProposals /></PageWrapper>} />
-                  <Route path="/global-target" element={<PageWrapper><GlobalTarget /></PageWrapper>} />
-                  <Route path="/meeting-preps" element={<PageWrapper><MeetingPrepHub /></PageWrapper>} />
-                  <Route path="/meeting-preps/:id/print" element={<PrintPrepPage />} />
-                  <Route path="/clients" element={<PageWrapper><ClientsList /></PageWrapper>} />
-                  <Route path="/hot-clients" element={<PageWrapper><ClientsList filter="hot" /></PageWrapper>} />
-                  <Route path="/follow-ups" element={<PageWrapper><ClientsList filter="followup" /></PageWrapper>} />
-                  <Route path="/clients/new" element={<PageWrapper><AddEditClient /></PageWrapper>} />
-                  <Route path="/clients/:id" element={<PageWrapper><ClientDetail /></PageWrapper>} />
-                  <Route path="/clients/:id/edit" element={<PageWrapper><AddEditClient /></PageWrapper>} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </AnimatePresence>
+              <React.Suspense fallback={
+                <div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              }>
+                <AnimatePresence mode="wait">
+                  <Routes location={location} key={location.pathname}>
+                    <Route path="/" element={<PageWrapper><Dashboard /></PageWrapper>} />
+                    <Route path="/pipeline" element={<PageWrapper><Pipeline /></PageWrapper>} />
+                    <Route path="/proposals" element={<PageWrapper><TechnicalProposals /></PageWrapper>} />
+                    <Route path="/global-target" element={<PageWrapper><GlobalTarget /></PageWrapper>} />
+                    <Route path="/meeting-preps" element={<PageWrapper><MeetingPrepHub /></PageWrapper>} />
+                    <Route path="/meeting-preps/:id/print" element={<PrintPrepPage />} />
+                    <Route path="/clients" element={<PageWrapper><ClientsList /></PageWrapper>} />
+                    <Route path="/hot-clients" element={<PageWrapper><ClientsList filter="hot" /></PageWrapper>} />
+                    <Route path="/follow-ups" element={<PageWrapper><ClientsList filter="followup" /></PageWrapper>} />
+                    <Route path="/clients/new" element={<PageWrapper><AddEditClient /></PageWrapper>} />
+                    <Route path="/clients/:id" element={<PageWrapper><ClientDetail /></PageWrapper>} />
+                    <Route path="/clients/:id/edit" element={<PageWrapper><AddEditClient /></PageWrapper>} />
+                    <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
+                  </Routes>
+                </AnimatePresence>
+              </React.Suspense>
             </div>
           </main>
         </div>

@@ -32,7 +32,9 @@ router.post('/generate-docx', async (req, res) => {
       targetSegment: data.targetSegment || '',
       projectDescription: data.projectDescription || '',
       revenueModel: data.revenueModel || '',
-      workflow: data.workflow || '',
+      workflow: Array.isArray(data.workflow) 
+        ? data.workflow.map((s, i) => `${i + 1}- ${s}`).join('\n') 
+        : (data.workflow || ''),
       technicalAssessment: data.technicalAssessment || '',
       estimatedCost: data.estimatedCost || '',
       estimatedDuration: data.estimatedDuration || '',
@@ -130,7 +132,7 @@ router.post('/stream', async (req, res) => {
   ],
   "adminFeatures": [{"name": "..."}],
   "revenueModel": "...",
-  "workflow": "...",
+  "workflow": ["الخطوة الأولى...", "الخطوة الثانية..."],
   "technicalAssessment": "...",
   "estimatedCost": "...",
   "estimatedDuration": "..."

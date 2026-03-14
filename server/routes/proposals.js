@@ -14,9 +14,9 @@ router.post('/generate-docx', async (req, res) => {
     
     // Safety defaults for structured data to prevent docxtemplater failures
     const safeData = {
-      clientName: data.clientName || 'عميل كريم',
+      clientName: data.clientName || '',
       date: data.date || new Date().toISOString().split('T')[0],
-      offerNumber: data.offerNumber || 'MS-0000',
+      offerNumber: data.offerNumber || '',
       managerName: data.managerName || '',
       proposalText: data.proposalText || '',
       price: data.price || '0',
@@ -24,10 +24,20 @@ router.post('/generate-docx', async (req, res) => {
       total: data.total || '0',
       durationDays: data.durationDays || '0',
       serviceDescription: data.serviceDescription || '',
+      projectType: data.projectType || '',
+      projectActivity: data.projectActivity || '',
+      projectLanguage: data.projectLanguage || '',
+      projectComponents: data.projectComponents || '',
+      geographicScope: data.geographicScope || '',
+      targetSegment: data.targetSegment || '',
+      projectDescription: data.projectDescription || '',
+      revenueModel: data.revenueModel || '',
+      workflow: data.workflow || '',
+      technicalAssessment: data.technicalAssessment || '',
+      estimatedCost: data.estimatedCost || '',
+      estimatedDuration: data.estimatedDuration || '',
       strategicGoals: Array.isArray(data.strategicGoals) ? data.strategicGoals : [],
       actors: Array.isArray(data.actors) ? data.actors : [],
-      features: Array.isArray(data.features) ? data.features : [],
-      journeys: Array.isArray(data.journeys) ? data.journeys : [],
       adminFeatures: Array.isArray(data.adminFeatures) ? data.adminFeatures : []
     };
 
@@ -170,7 +180,7 @@ router.post('/stream', async (req, res) => {
 | التكلفة | |
 | مدة العمل | |
 
-بعد الانتهاء من النص أعلاه، أضف فوراً كتلة JSON برمجية تحتوي على البيانات المهيكلة لاستخدامها في النظام البرمجي، يجب أن تكون داخل وسم \`\`\`json وتتتبع الهيكل التالي بدقة:
+بعد الانتهاء من النص أعلاه، أضف فوراً كتلة JSON برمجية تحتوي على البيانات المهيكلة لاستخدامها في النظام البرمجي، يجب أن تكون داخل وسم \`\`\`json وتتتبع الهيكل التالي بدقة (تأكد من أن features مدمجة داخل actors):
 {
   "projectType": "...",
   "projectActivity": "...",
@@ -180,9 +190,13 @@ router.post('/stream', async (req, res) => {
   "targetSegment": "...",
   "projectDescription": "...",
   "strategicGoals": [{"name": "..."}],
-  "actors": [{"name": "...", "details": "..."}],
-  "features": [{"name": "..."}],
-  "journeys": [{"name": "..."}],
+  "actors": [
+    {
+      "name": "...",
+      "details": "...",
+      "features": [{"name": "..."}]
+    }
+  ],
   "adminFeatures": [{"name": "..."}],
   "revenueModel": "...",
   "workflow": "...",

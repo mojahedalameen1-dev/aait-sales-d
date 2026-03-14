@@ -53,6 +53,10 @@ router.post('/generate-docx', async (req, res) => {
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
+      delimiters: {
+        start: '{{',
+        end: '}}'
+      }
     });
 
     // Render the document

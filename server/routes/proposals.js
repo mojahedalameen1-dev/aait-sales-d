@@ -243,8 +243,20 @@ router.post('/stream', async (req, res) => {
             fullText += content;
             tokenCount++;
             
-            if (tokenCount % 12 === 0) {
-              const realProgress = Math.min(95, 10 + Math.round((tokenCount / 1200) * 85));
+            if (tokenCount % 10 === 0) {
+              // Expected typical proposal length is ~1500 tokens
+              const baseProgress = 10 + (tokenCount / 1500) * 85;
+              
+              // Non-linear progress: slows down as it approaches 99% to keep moving
+              let realProgress;
+              if (baseProgress < 90) {
+                realProgress = Math.round(baseProgress);
+              } else {
+                // After 90%, it slows down but continues to crawl towards 99%
+                const overage = baseProgress - 90;
+                realProgress = Math.min(99, 90 + Math.round(overage / (1 + overage/10)));
+              }
+
               sendEvent('progress', { 
                 value: realProgress, 
                 message: 'جاري كتابة بنود العرض الفني...' 

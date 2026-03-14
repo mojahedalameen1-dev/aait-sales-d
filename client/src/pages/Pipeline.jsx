@@ -396,40 +396,41 @@ export default function Pipeline() {
           })}
         </div>
 
-        {/* Global Lost Dropzone exactly at bottom - Only visible when dragging */}
+        {/* Global Lost Dropzone exactly at bottom - Always rendered but visually hidden when not dragging */}
         <AnimatePresence>
-          {isDraggingOverall && (
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}
-            >
-              <Droppable droppableId="خسر">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="w-[90vw] md:w-[600px] text-base md:text-xl shadow-lg"
-                    style={{
-                      height: '80px', borderRadius: '20px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                      background: snapshot.isDraggingOver ? '#EF4444' : (isDark ? 'rgba(30, 45, 74, 0.95)' : '#FFFFFF'),
-                      border: `2px dashed ${snapshot.isDraggingOver ? '#fff' : '#EF4444'}`,
-                      color: snapshot.isDraggingOver ? '#fff' : '#EF4444',
-                      fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-                      fontWeight: 800,
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <XCircle size={28} />
-                    {snapshot.isDraggingOver ? 'أفلت البطاقة هنا لتسجيل الخسارة' : 'منطقة الاستبعاد (اسحب الصفقات الخاسرة إلى هنا)'}
-                    <div style={{ display: 'none' }}>{provided.placeholder}</div>
-                  </div>
-                )}
-              </Droppable>
-            </motion.div>
-          )}
+          <motion.div
+            initial={false}
+            animate={{ 
+              opacity: isDraggingOverall ? 1 : 0, 
+              y: isDraggingOverall ? 0 : 50,
+              pointerEvents: isDraggingOverall ? 'auto' : 'none'
+            }}
+            style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}
+          >
+            <Droppable droppableId="خسر">
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="w-[90vw] md:w-[600px] text-base md:text-xl shadow-lg"
+                  style={{
+                    height: '80px', borderRadius: '20px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                    background: snapshot.isDraggingOver ? '#EF4444' : (isDark ? 'rgba(30, 45, 74, 0.95)' : '#FFFFFF'),
+                    border: `2px dashed ${snapshot.isDraggingOver ? '#fff' : '#EF4444'}`,
+                    color: snapshot.isDraggingOver ? '#fff' : '#EF4444',
+                    fontFamily: "'IBM Plex Sans Arabic', sans-serif",
+                    fontWeight: 800,
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  <XCircle size={28} />
+                  {snapshot.isDraggingOver ? 'أفلت البطاقة هنا لتسجيل الخسارة' : 'منطقة الاستبعاد (اسحب الصفقات الخاسرة إلى هنا)'}
+                  <div style={{ display: 'none' }}>{provided.placeholder}</div>
+                </div>
+              )}
+            </Droppable>
+          </motion.div>
         </AnimatePresence>
       </DragDropContext>
 

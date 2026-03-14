@@ -38,10 +38,15 @@ router.get('/:clientId', async (req, res) => {
     if (error) throw error;
     res.json(files);
   } catch (err) {
+    console.error('Fetch files error:', err);
+    let errorMsg = 'حدث خطأ أثناء تحميل ملفات العميل';
+    if (err.code === 'PGRST205') {
+      errorMsg = 'جدول الملفات (files) مفقود في قاعدة البيانات. يرجى إنشاؤه.';
+    }
     res.status(500).json({ 
-      error: 'حدث خطأ أثناء تحميل ملفات العميل',
+      error: errorMsg,
       details: err.message,
-      stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+      code: err.code,
       failedAt: 'Supabase files Fetch'
     });
   }

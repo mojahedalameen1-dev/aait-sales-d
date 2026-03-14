@@ -42,8 +42,13 @@ router.post('/', async (req, res) => {
 
     if (client_id) {
       await supabase
-        .from('meeting_analyses')
-        .insert([{ client_id, client_idea, analysis_result: analysis }]);
+        .from('meeting_preps')
+        .insert([{ 
+          client_id, 
+          idea_raw: client_idea, 
+          analysis_result: analysis,
+          title: `تحليل فكرة: ${client_name || 'عميل جديد'}`
+        }]);
     }
 
     res.json({ success: true, analysis });
@@ -69,7 +74,7 @@ router.post('/', async (req, res) => {
 router.get('/:clientId', async (req, res) => {
   try {
     const { data: analyses, error } = await supabase
-      .from('meeting_analyses')
+      .from('meeting_preps')
       .select('*')
       .eq('client_id', req.params.clientId)
       .order('created_at', { ascending: false });

@@ -7,7 +7,8 @@ try {
     res.status(500).json({ 
       error: 'Failed to load server module',
       message: err.message,
-      stack: err.stack
+      stack: err.stack,
+      hint: 'Check if all dependencies are in the root package.json and redeployed on Vercel.'
     });
   };
 }

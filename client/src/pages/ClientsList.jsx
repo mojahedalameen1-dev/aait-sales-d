@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { formatSAR } from '../utils/formatSAR';
@@ -30,6 +31,7 @@ export default function ClientsList({ filter }) {
 
   const { isDark } = useTheme();
   const { addToast } = useToast();
+  const { apiFetch } = useAuth();
 
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export default function ClientsList({ filter }) {
 
   async function fetchClients() {
     try {
-      const res = await fetch(API_URL('/api/clients'));
+      const res = await apiFetch(API_URL('/api/clients'));
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -230,7 +232,7 @@ export default function ClientsList({ filter }) {
         onClose={() => setShowConfirm(null)}
         onConfirm={async () => {
           try {
-            await fetch(API_URL(`/api/clients/${showConfirm}`), { method: 'DELETE' });
+            await apiFetch(API_URL(`/api/clients/${showConfirm}`), { method: 'DELETE' });
             setClients(prev => prev.filter(c => c.id !== showConfirm));
             setShowConfirm(null);
             addToast('تم حذف العميل بنجاح', 'info');

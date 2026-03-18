@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
 import { formatSAR } from '../utils/formatSAR';
 import { daysDiff } from '../utils/formatDate';
@@ -18,6 +19,7 @@ const STAGES = [
 export default function Pipeline() {
   const { isDark } = useTheme();
   const { addToast } = useToast();
+  const { apiFetch } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function Pipeline() {
 
   async function fetchClients() {
     try {
-      const res = await fetch(API_URL('/api/clients'));
+      const res = await apiFetch(API_URL('/api/clients'));
       if (res.ok) {
         const data = await res.json();
         const newColumns = { 'تفاوض': [], 'فاز': [] };
@@ -72,7 +74,7 @@ export default function Pipeline() {
     }
     setQuickSaving(true);
     try {
-      const res = await fetch(API_URL('/api/clients'), {
+      const res = await apiFetch(API_URL('/api/clients'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,7 +128,7 @@ export default function Pipeline() {
     }
 
     try {
-      const res = await fetch(API_URL(`/api/clients/${draggableId}/stage`), {
+      const res = await apiFetch(API_URL(`/api/clients/${draggableId}/stage`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage: destColId })
@@ -382,11 +384,14 @@ export default function Pipeline() {
                         </div>
                       )}
 
-                      {items.map((client, index) => (
-                        <Draggable key={client.id.toString()} draggableId={client.id.toString()} index={index}>
-                          {(provided, snapshot) => renderCard(client, index, provided, snapshot, stage)}
-                        </Draggable>
-                      ))}
+                      {items.map((client, index) => {
+                        const draggableId = client.id ? client.id.toString() : `temp-${index}`;
+                        return (
+                          <Draggable key={draggableId} draggableId={draggableId} index={index}>
+                            {(provided, snapshot) => renderCard(client, index, provided, snapshot, stage)}
+                          </Draggable>
+                        );
+                      })}
                       {provided.placeholder}
                     </div>
                   )}

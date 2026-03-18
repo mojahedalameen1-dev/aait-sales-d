@@ -2,73 +2,38 @@ const express = require('express');
 const { generateWithFallback } = require('../helpers/aiClient');
 const axios = require('axios');
 const router = express.Router();
-const supabase = require('../supabase');
+const db = require('../db');
+const { authenticateJWT } = require('../middleware/auth');
+
+// Apply auth to all routes
+router.use(authenticateJWT);
 
 router.post('/', async (req, res) => {
   const { prep_id, title, client_name, sector, idea_raw } = req.body;
 
   if (!process.env.DEEPSEEK_API_KEY) {
-    console.error('Environment Check - DEEPSEEK_API_KEY is missing');
-    return res.status(500).json({ 
-      error: '\u0645\u0641\u062a\u0627\u062d \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631 \u0641\u064a \u0627\u0644\u062e\u0627\u062f\u0645.',
-    });
+    return res.status(500).json({ error: 'مفتاح الذكاء الاصطناعي غير متوفر في الخادم.' });
   }
 
   if (!title || !idea_raw) {
-    return res.status(400).json({ error: '\u062c\u0645\u064a\u0631 \u0627\u0644\u062d\u0642\u0648\u0644 \u0645\u0637\u0644\u0648\u0628\u0629' });
+    return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
   }
 
   try {
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
+
+    // Verify ownership if updating existing prep
+    if (prep_id) {
+        const check = await db.query('SELECT user_id FROM meeting_preps WHERE id = $1', [prep_id]);
+        if (!check.rows[0] || (!isAdmin && check.rows[0].user_id !== userId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+    }
+
     const systemInstruction = `أنت الحين تشتغل كـ "محلل أعمال تقني" (Business Analyst) و "مدير منتجات" (Product Manager) خبرة في شركة سعودية رائدة لتطوير التطبيقات والمواقع.
 الهدف: أنا زميلك بالشركة، وأبيك تفزع لي في التجهيز لاجتماعات العملاء (Discovery Meetings). بعطيك فكرة مبدئية لتطبيق أو موقع طلبها العميل، وأبيك بناءً عليها تجهز لي "تقرير تحضيري مفصل جداً واحترافي" أبيض فيه وجهي قدام العميل.
-
-ممنوع الاختصار نهائياً: أبي كل نقطة بخصوص نطاق العمل (Scope) وورك فلو (Workflow) المشروع يتم تفصيله بدقة، سواء كان تطبيق أو موقع. لا تغفل أي تفاصيل تشغيلية أو تقنية أو منطقية.
-
-أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودية (البيضاء) الفخمة.
-
-الهيكل المطلوب للـ JSON:
-{
-  "project_idea": {
-    "summary": "شرح الفكرة بطريقة سلسة وواضحة جداً وتفصيلية (اكتب فقرة دسمة)",
-    "core_features": ["ميزة أساسية 1 مع شرح بسيط", "ميزة أساسية 2 مع شرح بسيط"]
-  },
-  "business_analysis": {
-    "main_goal": "الهدف التجاري الأساسي والعميق للمشروع",
-    "current_problem": "المشكلة اللي يحلها المشروع بتفصيل",
-    "target_users": ["فئة 1 بدقة", "فئة 2 بدقة"],
-    "expected_platforms": ["iOS", "Android", "Web", "Admin Panel"]
-  },
-  "user_journeys": [
-    {
-      "user_type": "نوع المستخدم (مثلاً: عميل / مزود خدمة / مندوب)",
-      "onboarding": ["خطوات التسجيل والترحيب بالتفصيل الممل"],
-      "core_journey": ["الرحلة الأساسية خطوة بخطوة من البداية للنهاية بدون إغفال أي زر أو إجراء"],
-      "system_actions": ["وش يسوي النظام في الخلفية؟ (تنبيهات، تغيير حالات، عمليات حسابية)"],
-      "end_of_journey": ["كيف تنتهي الرحلة؟ (تقييم، فواتير، إغلاق طلب)"]
-    }
-  ],
-  "admin_panel": {
-    "user_management": ["إدارة المستخدمين بكافة تفاصيلها (صلاحيات، تجميد، مراجعة)"],
-    "operations_management": ["إدارة العمليات المركزية (تدقيق، قبول، رفض، تتبع دقيق)"],
-    "settings_content": ["إدارة المحتوى والإشعارات والأكواد الترويجية والصفحات"],
-    "financial_reports": ["التقارير المالية والتشغيلية ولوحات القيادة (Dashboards)"]
-  },
-  "meeting_plan": {
-    "opening": "جملة افتتاحية احترافية تسحب انتباه العميل",
-    "next_step": "الهدف التالي والمحدد من الاجتماع (CTA) للحصول على انطباع احترافي"
-  },
-  "technical_workflow_questions": {
-    "workflows": ["أسئلة دقيقة جداً عن منطق العمل المعقد (ماذا لو..؟ كيف يتم..؟)"],
-    "edge_cases": ["الحالات الاستثنائية (الكنسلة، الفشل، التأخير، استرجاع المبالغ)"],
-    "integrations": ["بوابات الدفع، الرسائل، الخرائط، أنظمة المحاسبة، الربط مع جهات خارجية"],
-    "permissions": ["المستويات الوظيفية، الصلاحيات المتقاطعة، الأدوار"]
-  },
-  "discovery_questions": {
-     "business": ["أسئلة عن التحقق من الربحية ونموذج العمل"],
-     "technical": ["أسئلة عن البيئة التقنية والبيقية السابقة"],
-     "scope": ["أسئلة لضبط حدود العمل ومنع الـ Scope Creep"]
-  }
-}`;
+أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودية (البيضاء) الفخمة.`;
 
     const userPrompt = `بيانات الاجتماع:
 - العنوان: ${title}
@@ -87,36 +52,25 @@ router.post('/', async (req, res) => {
     let analysis = JSON.parse(analysisText);
 
     if (prep_id) {
-      await supabase
-        .from('meeting_preps')
-        .update({ analysis_result: analysis })
-        .eq('id', prep_id);
+      await db.query(
+        'UPDATE meeting_preps SET analysis_result = $1 WHERE id = $2',
+        [JSON.stringify(analysis), prep_id]
+      );
     }
 
     res.json({ success: true, analysis });
 
   } catch (error) {
     console.error('Analysis error:', error);
-    
-    if (error.message === 'ALL_MODELS_EXHAUSTED') {
-      return res.status(429).json({
-        error: error.message,
-        retryAfter: error.retryAfter
-      });
-    }
-
-    res.status(500).json({ 
-      error: '\u0641\u0634\u0644 \u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u062a\u062d\u0636\u064a\u0631 \u0639\u0628\u0631 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a',
-      details: error.message,
-      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
-      failedAt: 'AI Waterfall Analysis'
-    });
+    res.status(500).json({ error: 'فشل تحليل التحضير عبر الذكاء الاصطناعي' });
   }
 });
 
 router.get('/stream/:id', async (req, res) => {
   const prep_id = req.params.id;
   const apiKey = process.env.DEEPSEEK_API_KEY;
+  const userId = req.user.id;
+  const isAdmin = req.user.isAdmin;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'DeepSeek API Key missing' });
@@ -136,32 +90,16 @@ router.get('/stream/:id', async (req, res) => {
   try {
     sendEvent('start', { message: 'جاري جلب بيانات التحضير...' });
 
-    // 1. Fetch data from Supabase
-    const { data: prep, error: fetchError } = await supabase
-      .from('meeting_preps')
-      .select('*')
-      .eq('id', prep_id)
-      .single();
+    // 1. Fetch data and verify ownership
+    const result = await db.query('SELECT * FROM meeting_preps WHERE id = $1', [prep_id]);
+    const prep = result.rows[0];
 
-    if (fetchError || !prep) {
-      throw new Error('فشل العثور على بيانات التحضير');
+    if (!prep || (!isAdmin && prep.user_id !== userId)) {
+      throw new Error('فشل العثور على بيانات التحضير أو غير مصرح لك بالوصول');
     }
 
     const systemInstruction = `أنت الحين تشتغل كـ "محلل أعمال تقني" (Business Analyst) و "مدير منتجات" (Product Manager) خبرة في شركة سعودية رائدة لتطوير التطبيقات والمواقع.
-الهدف: أنا زميلك بالشركة، وأبيك تفزع لي في التجهيز لاجتماعات العملاء (Discovery Meetings). بعطيك فكرة مبدئية لتطبيق أو موقع طلبها العميل، وأبيك بناءً عليها تجهز لي "تقرير تحضيري مفصل جداً واحترافي" أبيض فيه وجهي قدام العميل.
-
-أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودية (البيضاء) الفخمة.
-
-الهيكل المطلوب للـ JSON:
-{
-  "project_idea": { "summary": "...", "core_features": [] },
-  "business_analysis": { "main_goal": "...", "current_problem": "...", "target_users": [], "expected_platforms": [] },
-  "user_journeys": [ { "user_type": "...", "onboarding": [], "core_journey": [], "system_actions": [], "end_of_journey": [] } ],
-  "admin_panel": { "user_management": [], "operations_management": [], "settings_content": [], "financial_reports": [] },
-  "meeting_plan": { "opening": "...", "next_step": "..." },
-  "technical_workflow_questions": { "workflows": [], "edge_cases": [], "integrations": [], "permissions": [] },
-  "discovery_questions": { "business": [], "technical": [], "scope": [] }
-}`;
+أجب بصيغة JSON فقط وبدقة متناهية وبدون مقدمات. استخدم مفردات البزنس السعودية.`;
 
     const userPrompt = `بيانات الاجتماع:
 - العنوان: ${prep.title}
@@ -208,7 +146,6 @@ router.get('/stream/:id', async (req, res) => {
             fullText += content;
             tokenCount++;
             
-            // Send progress every 8 tokens
             if (tokenCount % 8 === 0) {
               const realProgress = Math.min(92, 5 + Math.round((tokenCount / 800) * 87));
               sendEvent('progress', { 
@@ -218,25 +155,23 @@ router.get('/stream/:id', async (req, res) => {
               });
             }
           }
-        } catch (e) {
-          // Skip parse errors for non-json lines
-        }
+        } catch (e) {}
       }
     });
 
     stream.on('end', async () => {
       try {
         const cleaned = fullText.trim().replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        const result = JSON.parse(cleaned);
+        const finalResult = JSON.parse(cleaned);
 
         // Update Database
-        await supabase
-          .from('meeting_preps')
-          .update({ analysis_result: result })
-          .eq('id', prep_id);
+        await db.query(
+          'UPDATE meeting_preps SET analysis_result = $1 WHERE id = $2',
+          [JSON.stringify(finalResult), prep_id]
+        );
 
         sendEvent('progress', { value: 100, message: 'اكتمل التحليل بنجاح ✨' });
-        sendEvent('result', { data: result });
+        sendEvent('result', { data: finalResult });
         res.end();
       } catch (err) {
         sendEvent('error', { message: 'فشل في تحليل النتيجة النهائية' });

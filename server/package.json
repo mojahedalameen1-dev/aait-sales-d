@@ -1,7 +1,7 @@
 {
-  "name": "sales-focus-server",
+  "name": "business-development-server",
   "version": "1.0.0",
-  "description": "Sales Focus Backend Server",
+  "description": "Business Development Backend Server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -9,13 +9,17 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.99.0",
     "axios": "^1.13.6",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.6",
     "docxtemplater": "^3.54.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsdom": "^28.1.0",
+    "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "pizzip": "^3.1.8"
+    "pg": "^8.20.0",
+    "pizzip": "^3.1.8",
+    "sharp": "^0.34.5"
   }
 }

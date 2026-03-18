@@ -3,7 +3,11 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const supabase = require('../supabase');
+const db = require('../db');
+const { authenticateJWT } = require('../middleware/auth');
+
+// Apply auth to all routes
+router.use(authenticateJWT);
 
 const isVercel = process.env.VERCEL === '1';
 const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, '..', 'uploads');
@@ -29,31 +33,23 @@ const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
 // Get files for a client
 router.get('/:clientId', async (req, res) => {
   try {
-    const { data: files, error } = await supabase
-      .from('files')
-      .select('*')
-      .eq('client_id', req.params.clientId)
-      .order('uploaded_at', { ascending: false });
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
 
-    if (error) {
-      if (error.code === 'PGRST204' || error.code === 'PGRST205') {
-        return res.status(200).json([]); // Return empty array if table doesn't exist yet, to avoid frontend crash
-      }
-      throw error;
+    // Verify client access
+    const clientCheck = await db.query('SELECT user_id FROM clients WHERE id = $1', [req.params.clientId]);
+    if (!clientCheck.rows[0] || (!isAdmin && clientCheck.rows[0].user_id !== userId)) {
+      return res.status(403).json({ error: 'Access denied' });
     }
-    res.json(files);
+
+    const result = await db.query(
+      'SELECT * FROM files WHERE client_id = $1 ORDER BY uploaded_at DESC',
+      [req.params.clientId]
+    );
+    res.json(result.rows);
   } catch (err) {
     console.error('Fetch files error:', err);
-    let errorMsg = 'حدث خطأ أثناء تحميل ملفات العميل';
-    if (err.code === 'PGRST205' || err.code === 'PGRST204') {
-      errorMsg = 'جدول الملفات (files) مفقود في قاعدة البيانات. يرجى إنشاؤه.';
-    }
-    res.status(500).json({ 
-      error: errorMsg,
-      details: err.message,
-      code: err.code,
-      failedAt: 'Supabase files Fetch'
-    });
+    res.status(500).json({ error: 'حدث خطأ أثناء تحميل ملفات العميل' });
   }
 });
 
@@ -61,78 +57,79 @@ router.get('/:clientId', async (req, res) => {
 router.post('/:clientId', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'لم يتم رفع أي ملف' });
   try {
-    const { data: file, error } = await supabase
-      .from('files')
-      .insert([{ 
-        client_id: req.params.clientId, 
-        file_name: req.file.originalname, 
-        file_path: req.file.filename, 
-        file_type_label: req.body.file_type_label || 'أخرى' 
-      }])
-      .select()
-      .single();
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
 
-    if (error) throw error;
-    res.json(file);
+    // Verify client access
+    const clientCheck = await db.query('SELECT user_id FROM clients WHERE id = $1', [req.params.clientId]);
+    if (!clientCheck.rows[0] || (!isAdmin && clientCheck.rows[0].user_id !== userId)) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const result = await db.query(
+      'INSERT INTO files (client_id, file_name, file_path, file_type_label) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.params.clientId, req.file.originalname, req.file.filename, req.body.file_type_label || 'أخرى']
+    );
+
+    res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ 
-      error: 'حدث خطأ أثناء رفع الملف',
-      details: err.message,
-      stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-      failedAt: 'Supabase/Multer file Upload'
-    });
+    console.error('File upload error:', err);
+    res.status(500).json({ error: 'حدث خطأ أثناء رفع الملف' });
   }
 });
 
 // Download file
 router.get('/download/:fileId', async (req, res) => {
   try {
-    const { data: file, error } = await supabase
-      .from('files')
-      .select('*')
-      .eq('id', req.params.fileId)
-      .single();
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
 
-    if (error || !file) return res.status(404).json({ error: 'الملف غير موجود' });
+    const result = await db.query('SELECT * FROM files WHERE id = $1', [req.params.fileId]);
+    const file = result.rows[0];
+
+    if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
+
+    // Verify client access
+    const clientCheck = await db.query('SELECT user_id FROM clients WHERE id = $1', [file.client_id]);
+    if (!clientCheck.rows[0] || (!isAdmin && clientCheck.rows[0].user_id !== userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     const filePath = path.join(uploadsDir, file.file_path);
     res.download(filePath, file.file_name);
   } catch (err) {
-    res.status(500).json({ 
-      error: 'حدث خطأ أثناء تحميل الملف',
-      details: err.message,
-      stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-      failedAt: 'File System download'
-    });
+    console.error('Download error:', err);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحميل الملف' });
   }
 });
 
 // Delete file
 router.delete('/:fileId', async (req, res) => {
   try {
-    const { data: file, error: fetchErr } = await supabase
-      .from('files')
-      .select('*')
-      .eq('id', req.params.fileId)
-      .single();
+    const userId = req.user.id;
+    const isAdmin = req.user.isAdmin;
 
-    if (fetchErr || !file) return res.status(404).json({ error: 'الملف غير موجود' });
+    const result = await db.query('SELECT * FROM files WHERE id = $1', [req.params.fileId]);
+    const file = result.rows[0];
+
+    if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
+
+    // Verify client access
+    const clientCheck = await db.query('SELECT user_id FROM clients WHERE id = $1', [file.client_id]);
+    if (!clientCheck.rows[0] || (!isAdmin && clientCheck.rows[0].user_id !== userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     const filePath = path.join(uploadsDir, file.file_path);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     
-    const { error: delErr } = await supabase
-      .from('files')
-      .delete()
-      .eq('id', req.params.fileId);
+    await db.query('DELETE FROM files WHERE id = $1', [req.params.fileId]);
 
-    if (delErr) throw delErr;
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ 
-      error: 'حدث خطأ أثناء حذف الملف',
-      details: err.message,
-      stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-      failedAt: 'Supabase/File System delete'
-    });
+    console.error('Delete file error:', err);
+    res.status(500).json({ error: 'حدث خطأ أثناء حذف الملف' });
   }
 });
 

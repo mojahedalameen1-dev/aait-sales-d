@@ -1,33 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../supabase');
+const db = require('../db');
+const { authenticateJWT } = require('../middleware/auth');
+
+// Apply auth to all routes
+router.use(authenticateJWT);
 
 // GET Global Dashboard Statistics
 router.get('/stats', async (req, res) => {
     try {
-        const { data: clientsRaw, error } = await supabase
-            .from('clients')
-            .select(`
-                id, client_name, sector, created_at,
-                deals!deals_client_id_fkey (expected_value, payment_percentage, stage, last_contact_date, next_followup_date),
-                scores!scores_client_id_fkey (total_score)
-            `);
+        const isAdmin = req.user.isAdmin;
+        const userId = req.user.id;
 
-        if (error) throw error;
+        let query = `
+            SELECT 
+                c.id, c.client_name, c.sector, c.created_at,
+                d.expected_value, d.payment_percentage, d.stage, d.last_contact_date, d.next_followup_date,
+                s.total_score
+            FROM clients c
+            LEFT JOIN deals d ON c.id = d.client_id
+            LEFT JOIN scores s ON c.id = s.client_id
+        `;
+        let params = [];
 
-        // Flatten data for the existing calculation logic
-        const clients = clientsRaw.map(c => ({
-            id: c.id,
-            client_name: c.client_name,
-            sector: c.sector,
-            created_at: c.created_at,
-            expected_value: c.deals?.[0]?.expected_value || 0,
-            payment_percentage: c.deals?.[0]?.payment_percentage || 0.50,
-            stage: c.deals?.[0]?.stage || 'جديد',
-            last_contact_date: c.deals?.[0]?.last_contact_date || '',
-            next_followup_date: c.deals?.[0]?.next_followup_date || '',
-            total_score: c.scores?.[0]?.total_score || 0
-        }));
+        if (!isAdmin) {
+            query += ' WHERE c.user_id = $1';
+            params.push(userId);
+        }
+
+        const result = await db.query(query, params);
+        const clients = result.rows;
 
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
@@ -44,7 +46,6 @@ router.get('/stats', async (req, res) => {
         // Won Deals this month (Target Progress)
         const wonThisMonth = clients.filter(c => {
             if (c.stage !== 'فاز') return false;
-            // using created_at/last_contact_date logic from current dashboard as approximation
             const dealDate = new Date(c.last_contact_date || c.created_at);
             return dealDate.getMonth() === currentMonth && dealDate.getFullYear() === currentYear;
         });
@@ -62,7 +63,7 @@ router.get('/stats', async (req, res) => {
             return s + (targetValue * probability);
         }, 0);
 
-        // Top active deals to close (Recommendation Engine)
+        // Top active deals to close
         const topActiveToClose = [...activeClients]
             .map(c => {
                 const payPct = c.payment_percentage != null ? parseFloat(c.payment_percentage) : 0.50;
@@ -76,7 +77,7 @@ router.get('/stats', async (req, res) => {
         // Today's Followups
         const todayFollowups = clients.filter(c => {
             if (!c.next_followup_date) return false;
-            return c.next_followup_date <= todayStr; // Includes overdue
+            return c.next_followup_date <= todayStr;
         }).map(c => ({
             id: c.id,
             client_name: c.client_name,
@@ -97,8 +98,31 @@ router.get('/stats', async (req, res) => {
             }));
 
         // Today added value
-        const todayAddedValue = clients.filter(c => c.created_at && c.created_at.startsWith(todayStr))
-            .reduce((s, c) => s + (parseFloat(c.expected_value) || 0), 0);
+        // Note: created_at in DB is timestamptz, need to handle it correctly
+        const todayAddedValue = clients.filter(c => {
+            if (!c.created_at) return false;
+            const dStr = new Date(c.created_at).toISOString().split('T')[0];
+            return dStr === todayStr;
+        }).reduce((s, c) => s + (parseFloat(c.expected_value) || 0), 0);
+
+        // Granular Counts for BD Dashboard
+        const activeDealsCount = activeClients.length;
+        const closingBoardCount = clients.filter(c => c.stage === 'تفاوض').length;
+        
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+        const monthClientsCount = clients.filter(c => {
+            if (!c.created_at) return false;
+            return new Date(c.created_at).toISOString().split('T')[0] >= firstDayOfMonth;
+        }).length;
+
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+        const coldDealsCount = activeClients.filter(c => {
+            const lastContact = c.last_contact_date || c.created_at;
+            if (!lastContact) return true;
+            return new Date(lastContact).toISOString().split('T')[0] < sevenDaysAgoStr;
+        }).length;
 
         res.json({
             totalClients,
@@ -109,17 +133,16 @@ router.get('/stats', async (req, res) => {
             topActiveToClose,
             todayFollowups,
             topHotClients,
-            todayAddedValue
+            todayAddedValue,
+            activeDealsCount,
+            closingBoardCount,
+            monthClientsCount,
+            coldDealsCount
         });
 
     } catch (err) {
-        console.error('Dashboard Auth/Stats Error:', err);
-        res.status(500).json({ 
-            error: 'حدث خطأ أثناء تحميل إحصائيات لوحة التحكم',
-            details: err.message,
-            stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-            failedAt: 'Supabase Dashboard Stats'
-        });
+        console.error('Dashboard Stats Error:', err);
+        res.status(500).json({ error: 'حدث خطأ أثناء تحميل إحصائيات لوحة التحكم' });
     }
 });
 

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../context/AuthContext';
 import { API_URL, UPLOADS_URL } from '../utils/apiConfig';
 import ScoreRing from '../components/ScoreRing';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -31,6 +32,7 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { addToast } = useToast();
+  const { apiFetch } = useAuth();
 
   const [client, setClient] = useState(null);
   const [activeTab, setActiveTab] = useState('deal');
@@ -56,9 +58,9 @@ export default function ClientDetail() {
   async function fetchData() {
     try {
       const [cRes, fRes, aRes] = await Promise.all([
-        fetch(API_URL(`/api/clients/${id}`)),
-        fetch(API_URL(`/api/files/${id}`)),
-        fetch(API_URL(`/api/analyze-idea/${id}`))
+        apiFetch(API_URL(`/api/clients/${id}`)),
+        apiFetch(API_URL(`/api/files/${id}`)),
+        apiFetch(API_URL(`/api/analyze-idea/${id}`))
       ]);
       const [cData, fData, aData] = await Promise.all([cRes.json(), fRes.json(), aRes.json()]);
 
@@ -76,7 +78,7 @@ export default function ClientDetail() {
 
   async function handleDeleteClient() {
     try {
-      await fetch(API_URL(`/api/clients/${id}`), { method: 'DELETE' });
+      await apiFetch(API_URL(`/api/clients/${id}`), { method: 'DELETE' });
       addToast('تم حذف العميل بنجاح', 'success');
       navigate('/clients');
     } catch (e) {
@@ -93,7 +95,7 @@ export default function ClientDetail() {
     formData.append('client_id', id);
 
     try {
-      const res = await fetch(API_URL(`/api/files/${id}`), { method: 'POST', body: formData });
+      const res = await apiFetch(API_URL(`/api/files/${id}`), { method: 'POST', body: formData });
       const data = await res.json();
       if (data.id) {
         addToast('تم الرفع بنجاح', 'success');
@@ -108,7 +110,7 @@ export default function ClientDetail() {
     if (!idea.trim()) return addToast('يرجى إدخال فكرة العميل أولاً', 'info');
     setIsAnalyzing(true);
     try {
-      const res = await fetch(API_URL('/api/analyze-idea'), {
+      const res = await apiFetch(API_URL('/api/analyze-idea'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: id, client_idea: idea, client_name: client.client_name, sector: client.sector })
@@ -434,7 +436,7 @@ export default function ClientDetail() {
         onConfirm={async () => {
           if (!showFileDeleteId) return;
           try {
-            await fetch(API_URL(`/api/files/${showFileDeleteId}`), { method: 'DELETE' });
+            await apiFetch(API_URL(`/api/files/${showFileDeleteId}`), { method: 'DELETE' });
             fetchData();
             addToast('تم حذف الملف بنجاح', 'success');
           } catch (e) {

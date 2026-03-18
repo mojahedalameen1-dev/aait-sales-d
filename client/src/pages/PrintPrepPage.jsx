@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../utils/apiConfig';
+import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatDate';
 import { useParams } from 'react-router-dom';
 import MeetingPrepPrintLayout from '../components/MeetingPrepPrintLayout';
@@ -10,11 +11,12 @@ export default function PrintPrepPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { apiFetch } = useAuth();
 
   useEffect(() => {
     async function fetchPrep() {
       try {
-        const res = await fetch(API_URL(`/api/meeting-preps/${id}`));
+        const res = await apiFetch(API_URL(`/api/meeting-preps/${id}`));
         if (!res.ok) throw new Error('Failed to fetch prep data');
         const json = await res.json();
         setData(json);

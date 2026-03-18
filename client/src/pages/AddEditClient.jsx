@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Save, X, ChevronLeft, Briefcase, Users, Target, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
 import { getScoreLabel } from '../utils/scoreColor';
 
@@ -70,6 +71,7 @@ export default function AddEditClient() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { addToast } = useToast();
+  const { apiFetch } = useAuth();
   const isEdit = !!id;
 
   const [form, setForm] = useState(defaultForm);
@@ -84,7 +86,7 @@ export default function AddEditClient() {
 
   useEffect(() => {
     if (isEdit) {
-      fetch(API_URL(`/api/clients/${id}`))
+      apiFetch(API_URL(`/api/clients/${id}`))
         .then(r => r.json())
         .then(data => {
           setForm({
@@ -138,7 +140,7 @@ export default function AddEditClient() {
     try {
       const url = isEdit ? API_URL(`/api/clients/${id}`) : API_URL('/api/clients');
       const method = isEdit ? 'PUT' : 'POST';
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

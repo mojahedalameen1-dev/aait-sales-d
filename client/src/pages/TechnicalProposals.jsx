@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FileText, Copy, Loader2, Sparkles, Zap, Download, FileDown, Plus, Trash2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
 import { useStreamAnalysis } from '../hooks/useStreamAnalysis';
 import AnalysisLoader from '../components/AnalysisLoader';
@@ -24,6 +25,7 @@ const item = {
 export default function TechnicalProposals() {
   const { isDark } = useTheme();
   const { addToast } = useToast();
+  const { apiFetch, token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [exportingDocx, setExportingDocx] = useState(false);
   const processedResultRef = React.useRef(null);
@@ -171,7 +173,11 @@ export default function TechnicalProposals() {
       return;
     }
 
-    startStream(API_URL('/api/proposals/stream'), {
+    const streamUrl = new URL(API_URL('/api/proposals/stream'));
+    if (token) {
+        streamUrl.searchParams.append('token', token);
+    }
+    startStream(streamUrl.toString(), {
       method: 'POST',
       body: { text: formData.meetingNotes }
     });
@@ -197,7 +203,7 @@ export default function TechnicalProposals() {
       };
 
       const endpoint = '/api/proposals/generate-docx';
-      const response = await fetch(API_URL(endpoint), {
+      const response = await apiFetch(API_URL(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

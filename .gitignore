@@ -47,3 +47,6 @@ Thumbs.db
 .agent/
 _agents/
 _agent/
+
+# Uploads
+server/uploads/

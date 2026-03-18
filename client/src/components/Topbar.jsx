@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, AlertCircle, Calendar, CheckCircle2, Menu, PlusCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatDate';
 import { API_URL } from '../utils/apiConfig';
 
 export default function Topbar({ isMobile, setIsMobileOpen }) {
   const { isDark } = useTheme();
+  const { apiFetch, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dueTodayDeals, setDueTodayDeals] = useState([]);
@@ -19,8 +21,9 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
 
   useEffect(() => {
     const fetchTodayFollowups = async () => {
+      if (!user || isAdmin) return;
       try {
-        const res = await fetch(API_URL('/api/clients'));
+        const res = await apiFetch(API_URL('/api/clients'));
         if (res.ok) {
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
@@ -47,10 +50,10 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
     fetchTodayFollowups();
     const intervalId = setInterval(fetchTodayFollowups, 60000); // 1 min update
     return () => clearInterval(intervalId);
-  }, []);
+  }, [user, isAdmin]);
 
   return (
-    <div className="h-16 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-[#0F1629]/80 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300">
+    <div className="h-16 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-[#0F1629]/80 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300 shadow-sm">
       <div className="flex items-center gap-2">
         {isMobile && (
           <button
@@ -69,27 +72,32 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
       </div>
 
       <div className="flex items-center gap-4 relative">
-        {/* Quick Deal Button */}
-        <button
-          onClick={() => navigate('/clients/new')}
-          className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-full bg-gradient-to-br from-[#4F8EF7] to-[#7C3AED] text-white border-none cursor-pointer font-['IBM_Plex_Sans_Arabic'] text-sm md:text-[15px] font-extrabold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
-        >
-          <PlusCircle size={20} className="shrink-0" />
-          <span className="hidden sm:inline">إضافة صفقة سريعة</span>
-        </button>
+        {/* Quick Deal Button - Only for Developers */}
+        {!isAdmin && (
+          <button
+            onClick={() => navigate('/clients/new')}
+            className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] text-white border-none cursor-pointer font-['IBM_Plex_Sans_Arabic'] text-sm md:text-[15px] font-extrabold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all duration-300"
+          >
+            <PlusCircle size={20} className="shrink-0" />
+            <span className="hidden sm:inline">إضافة صفقة سريعة</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="relative w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-800 dark:text-slate-200 cursor-pointer transition-colors duration-200"
-          aria-label="عرض الإشعارات"
-        >
-          <Bell size={20} />
-          {dueTodayDeals.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-[#0F1629]">
-              {dueTodayDeals.length}
-            </span>
-          )}
-        </button>
+        {/* Notifications - Only for Developers */}
+        {!isAdmin && (
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="relative w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-800 dark:text-slate-200 cursor-pointer transition-colors duration-200"
+            aria-label="عرض الإشعارات"
+          >
+            <Bell size={20} />
+            {dueTodayDeals.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-[#0F1629]">
+                {dueTodayDeals.length}
+              </span>
+            )}
+          </button>
+        )}
 
         <AnimatePresence>
           {isDropdownOpen && (

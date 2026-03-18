@@ -6,6 +6,10 @@ const path = require('path');
 const fs = require('fs');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
+const { authenticateJWT } = require('../middleware/auth');
+
+// Apply auth to all routes
+router.use(authenticateJWT);
 
 // Generate DOCX
 router.post('/generate-docx', async (req, res) => {

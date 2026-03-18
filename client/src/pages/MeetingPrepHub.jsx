@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ToastProvider';
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
 import SkeletonLoader from '../components/SkeletonLoader';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -38,6 +39,7 @@ function debounce(func, wait) {
 export default function MeetingPrepHub() {
   const { isDark } = useTheme();
   const { addToast } = useToast();
+  const { apiFetch, token } = useAuth();
 
   const [preps, setPreps] = useState([]);
 
@@ -78,7 +80,7 @@ export default function MeetingPrepHub() {
 
   async function fetchPreps() {
     try {
-      const res = await fetch(API_URL('/api/meeting-preps'));
+      const res = await apiFetch(API_URL('/api/meeting-preps'));
       const data = await res.json();
       if (Array.isArray(data)) {
         setPreps(data);
@@ -101,7 +103,7 @@ export default function MeetingPrepHub() {
     setActivePrepId(id);
     setPrepData(null); // triggers skeleton
     try {
-      const res = await fetch(API_URL(`/api/meeting-preps/${id}`));
+      const res = await apiFetch(API_URL(`/api/meeting-preps/${id}`));
       const data = await res.json();
       setPrepData(data);
       setFormData({
@@ -123,7 +125,7 @@ export default function MeetingPrepHub() {
   const performAutoSave = async (id, payload) => {
     if (!id) return;
     try {
-      await fetch(API_URL(`/api/meeting-preps/${id}`), {
+      await apiFetch(API_URL(`/api/meeting-preps/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -165,7 +167,7 @@ export default function MeetingPrepHub() {
 
   async function handleCreateNew() {
     try {
-      const res = await fetch(API_URL('/api/meeting-preps'), {
+      const res = await apiFetch(API_URL('/api/meeting-preps'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'تحضير اجتماع جديد' })
@@ -181,7 +183,7 @@ export default function MeetingPrepHub() {
 
   async function handleDelete() {
     try {
-      await fetch(API_URL(`/api/meeting-preps/${activePrepId}`), { method: 'DELETE' });
+      await apiFetch(API_URL(`/api/meeting-preps/${activePrepId}`), { method: 'DELETE' });
       addToast('تم الحذف بنجاح', 'success');
       setShowDelete(false);
       const nextId = preps.find(p => p.id !== activePrepId)?.id || null;
@@ -205,7 +207,11 @@ export default function MeetingPrepHub() {
       console.warn('Pre-analysis save failed, continuing anyway...', e);
     }
 
-    startStream(API_URL(`/api/analyze-prep/stream/${activePrepId}`));
+    const streamUrl = new URL(API_URL(`/api/analyze-prep/stream/${activePrepId}`));
+    if (token) {
+        streamUrl.searchParams.append('token', token);
+    }
+    startStream(streamUrl.toString());
   }
 
   async function handlePrint() {
@@ -438,7 +444,7 @@ export default function MeetingPrepHub() {
                       {/* --- COVER PAGE (Print Only) --- */}
                       <div className="print-cover-page">
                         <div className="print-cover-logo-section">
-                          <div className="print-cover-title">SALES FOCUS</div>
+                          <div className="print-cover-title">تطوير الأعمال</div>
                           <div className="print-cover-subtitle">Intelligence Hub</div>
                         </div>
                         <div className="print-cover-main-header">
@@ -460,7 +466,7 @@ export default function MeetingPrepHub() {
                           </div>
                         </div>
                         <div className="print-cover-footer">
-                          هذا التقرير سري وخاص بمنتسبي منظومة Sales Focus AI فقط.
+                          هذا التقرير سري وخاص بمنتسبي منظومة تطوير الأعمال فقط.
                         </div>
                       </div>
 
@@ -647,11 +653,11 @@ export default function MeetingPrepHub() {
                             <span className="font-black text-emerald-500 bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/10">DeepSeek / Chat-Reasoner</span>
                           </div>
                           <div className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8f9fa', color: textMuted, border: `1px solid ${border}` }}>
-                            Sales Focus AI V2.1.0
+                            تطوير الأعمال V2.1.0
                           </div>
                         </div>
                       </div>
-                      <div className="print-footer print-only">هذا التقرير تم توليده بواسطة Sales Focus AI - سرية المعلومات محفوظة.</div>
+                      <div className="print-footer print-only">هذا التقرير تم توليده بواسطة تطوير الأعمال - سرية المعلومات محفوظة.</div>
                     </div>
                   );
                 } catch (e) {

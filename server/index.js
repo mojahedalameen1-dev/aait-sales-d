@@ -44,6 +44,8 @@ try {
 app.use('/uploads', express.static(uploadsDir));
 
 // Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin', require('./routes/admin'));
 app.use('/api/clients', require('./routes/clients'));
 app.use('/api/files', require('./routes/files'));
 app.use('/api/analyze-idea', require('./routes/analyze'));
@@ -60,18 +62,15 @@ app.get('/api/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     isVercel: !!process.env.VERCEL,
     diagnostics: {
-      supabaseUrlLoaded: !!process.env.SUPABASE_URL,
-      supabaseAnonKeyLoaded: !!process.env.SUPABASE_ANON_KEY
+      neonDbConnected: !!process.env.DATABASE_URL
     }
   });
 });
 
-// Remove old debug routes if any or keep for compatibility
-app.get('/api/debug-status', (req, res) => res.redirect('/api/health'));
 
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`✅ Sales Focus Server running on http://localhost:${PORT}`);
+    console.log(`✅ تطوير الأعمال Server running on http://localhost:${PORT}`);
   });
 }
 

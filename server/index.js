@@ -22,6 +22,15 @@ console.log('🚀 Server starting initialization...');
 console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`Vercel environment: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
 
+// Validate required environment variables
+const requiredEnv = ['DATABASE_URL', 'JWT_SECRET'];
+const missingEnv = requiredEnv.filter(env => !process.env[env]);
+if (missingEnv.length > 0) {
+  console.warn(`⚠️ Warning: Missing environment variables: ${missingEnv.join(', ')}`);
+} else {
+  console.log('✅ All required environment variables are present.');
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());

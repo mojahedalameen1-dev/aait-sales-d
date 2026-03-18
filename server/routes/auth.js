@@ -8,7 +8,7 @@ const logActivity = require('../helpers/activityLogger');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const sharp = require('sharp');
+// const sharp = require('sharp');
 
 const uploadsDir = path.join(__dirname, '..', 'uploads', 'profiles');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });

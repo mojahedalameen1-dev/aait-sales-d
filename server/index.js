@@ -21,7 +21,6 @@ const PORT = process.env.PORT || 5000;
 console.log('🚀 Server starting initialization...');
 console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`Vercel environment: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
-console.log(`Supabase URL configured: ${process.env.SUPABASE_URL ? 'Yes' : 'No'}`);
 
 // Middleware
 app.use(cors());

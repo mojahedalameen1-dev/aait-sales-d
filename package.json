@@ -9,7 +9,6 @@
     "build": "cd client && npm install && npm run build"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.99.0",
     "axios": "^1.13.6",
     "cors": "^2.8.6",
     "docxtemplater": "^3.68.3",

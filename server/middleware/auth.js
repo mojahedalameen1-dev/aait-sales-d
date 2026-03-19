@@ -6,17 +6,30 @@ const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
   let token = null;
 
-  if (authHeader) {
+  // 1. Check Authorization Header
+  if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (req.query && req.query.token) {
+  } 
+  
+  // 2. Fallback to Query String (?token=...)
+  if (!token && req.query && req.query.token) {
     token = req.query.token;
+  }
+
+  // Debug logging for troubleshooting 401/403 issues
+  if (!token) {
+    console.log(`[Auth] No token found for ${req.method} ${req.originalUrl || req.url}`);
+    console.log(`[Auth] Headers: ${JSON.stringify(req.headers)}`);
+    if (req.query) console.log(`[Auth] Query: ${JSON.stringify(req.query)}`);
   }
 
   if (token) {
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) {
+        console.error(`[Auth] JWT Verification Failed: ${err.message}`);
         return res.sendStatus(403);
       }
+
 
       req.user = user;
       next();

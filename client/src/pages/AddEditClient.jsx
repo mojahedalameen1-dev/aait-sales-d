@@ -202,10 +202,12 @@ export default function AddEditClient() {
           <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="glass-card p-5 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>
+                <label htmlFor="client_name" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>
                   اسم العميل أو الجهة <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <input
+                  id="client_name"
+                  name="client_name"
                   className="form-input"
                   style={{ fontSize: '17px', padding: '16px' }}
                   placeholder="مثال: شركة الصناعات المتقدمة"
@@ -237,22 +239,22 @@ export default function AddEditClient() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>المدينة</label>
-                <select className="form-input" value={form.city} onChange={e => set('city', e.target.value)}>
+                <label htmlFor="city" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>المدينة</label>
+                <select id="city" name="city" className="form-input" value={form.city} onChange={e => set('city', e.target.value)}>
                   {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>القطاع</label>
-                <select className="form-input" value={form.sector} onChange={e => set('sector', e.target.value)}>
+                <label htmlFor="sector" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>القطاع</label>
+                <select id="sector" name="sector" className="form-input" value={form.sector} onChange={e => set('sector', e.target.value)}>
                   {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>قناة الاكتساب</label>
-                <select className="form-input" value={form.channel} onChange={e => set('channel', e.target.value)}>
+                <label htmlFor="channel" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>قناة الاكتساب</label>
+                <select id="channel" name="channel" className="form-input" value={form.channel} onChange={e => set('channel', e.target.value)}>
                   {CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -268,10 +270,12 @@ export default function AddEditClient() {
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="glass-card p-5 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>
+                <label htmlFor="deal_name" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>
                   اسم الصفقة <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <input
+                  id="deal_name"
+                  name="deal_name"
                   className="form-input"
                   placeholder="مثال: توريد نظام نقاط البيع لجميع الفروع"
                   value={form.deal_name}
@@ -282,40 +286,40 @@ export default function AddEditClient() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>القيمة الكلية للصفقة (ر.س)</label>
-                <input className="form-input" type="number" value={form.expected_value} onChange={e => set('expected_value', e.target.value)} placeholder="0.00" />
+                <label htmlFor="expected_value" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>القيمة الكلية للصفقة (ر.س)</label>
+                <input id="expected_value" name="expected_value" className="form-input" type="number" value={form.expected_value} onChange={e => set('expected_value', e.target.value)} placeholder="0.00" />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>تُحسب للتارجت (نسبة الدفعة الأولى %)</label>
-                <input className="form-input" type="number" value={form.payment_percentage * 100} onChange={e => set('payment_percentage', Number(e.target.value) / 100)} placeholder="50" min="0" max="100" />
+                <label htmlFor="payment_percentage" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>تُحسب للتارجت (نسبة الدفعة الأولى %)</label>
+                <input id="payment_percentage" name="payment_percentage" className="form-input" type="number" value={form.payment_percentage * 100} onChange={e => set('payment_percentage', Number(e.target.value) / 100)} placeholder="50" min="0" max="100" />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>مرحلة العميل الحالية</label>
-                <select className="form-input" value={form.stage} onChange={e => set('stage', e.target.value)} style={{ color: stageColors[form.stage], fontWeight: 700 }}>
+                <label htmlFor="stage" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>مرحلة العميل الحالية</label>
+                <select id="stage" name="stage" className="form-input" value={form.stage} onChange={e => set('stage', e.target.value)} style={{ color: stageColors[form.stage], fontWeight: 700 }}>
                   {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>موعد المتابعة القادم</label>
-                <input className="form-input" type="date" value={form.next_followup_date} onChange={e => set('next_followup_date', e.target.value)} />
+                <label htmlFor="next_followup_date" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>موعد المتابعة القادم</label>
+                <input id="next_followup_date" name="next_followup_date" className="form-input" type="date" value={form.next_followup_date} onChange={e => set('next_followup_date', e.target.value)} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>رابط التكت (Ticket URL)</label>
-                <input className="form-input" placeholder="https://..." value={form.ticket_link} onChange={e => set('ticket_link', e.target.value)} />
+                <label htmlFor="ticket_link" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>رابط التكت (Ticket URL)</label>
+                <input id="ticket_link" name="ticket_link" className="form-input" placeholder="https://..." value={form.ticket_link} onChange={e => set('ticket_link', e.target.value)} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>كود السلاك (Slack Code)</label>
-                <input className="form-input" placeholder="SL-123" value={form.slack_code} onChange={e => set('slack_code', e.target.value)} />
+                <label htmlFor="slack_code" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>كود السلاك (Slack Code)</label>
+                <input id="slack_code" name="slack_code" className="form-input" placeholder="SL-123" value={form.slack_code} onChange={e => set('slack_code', e.target.value)} />
               </div>
 
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>ملاحظات إضافية</label>
-                <textarea className="form-input" rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} />
+                <label htmlFor="notes" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: textSecondary, marginBottom: '10px' }}>ملاحظات إضافية</label>
+                <textarea id="notes" name="notes" className="form-input" rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>

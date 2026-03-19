@@ -6,6 +6,18 @@ module.exports = (req, res) => {
       try { require(d); results[d] = 'OK'; }
       catch (e) { results[d] = 'ERROR: ' + e.message; }
     });
+    
+    // Try to require the server components one by one
+    try {
+      require('../server/db');
+      results['server/db'] = 'OK';
+    } catch (e) { results['server/db'] = 'ERROR: ' + e.message; }
+    
+    try {
+      require('../server/routes/auth');
+      results['server/routes/auth'] = 'OK';
+    } catch (e) { results['server/routes/auth'] = 'ERROR: ' + e.message; }
+
     return res.json({ status: 'API Layer OK', env: process.env.NODE_ENV, dependencies: results });
   }
 

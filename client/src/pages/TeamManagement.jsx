@@ -196,8 +196,10 @@ const TeamManagement = () => {
                                     </div>
                                 )}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-400 block">الاسم الكامل</label>
+                                    <label htmlFor="fullName" className="text-sm font-medium text-gray-400 block">الاسم الكامل</label>
                                     <input 
+                                        id="fullName"
+                                        name="fullName"
                                         type="text"
                                         value={newUser.fullName}
                                         onChange={(e) => setNewUser({...newUser, fullName: e.target.value})}
@@ -207,8 +209,10 @@ const TeamManagement = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-400 block">اسم المستخدم</label>
+                                    <label htmlFor="username" className="text-sm font-medium text-gray-400 block">اسم المستخدم</label>
                                     <input 
+                                        id="username"
+                                        name="username"
                                         type="text"
                                         value={newUser.username}
                                         onChange={(e) => setNewUser({...newUser, username: e.target.value})}
@@ -218,8 +222,10 @@ const TeamManagement = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-400 block">كلمة المرور</label>
+                                    <label htmlFor="password" className="text-sm font-medium text-gray-400 block">كلمة المرور</label>
                                     <input 
+                                        id="password"
+                                        name="password"
                                         type="password"
                                         value={newUser.password}
                                         onChange={(e) => setNewUser({...newUser, password: e.target.value})}
@@ -229,8 +235,10 @@ const TeamManagement = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-gray-400 block mb-1">الصلاحية</label>
+                                    <label htmlFor="role" className="text-sm font-medium text-gray-400 block mb-1">الصلاحية</label>
                                     <select 
+                                        id="role"
+                                        name="role"
                                         value={newUser.role}
                                         onChange={(e) => setNewUser({...newUser, role: e.target.value})}
                                         className="w-full bg-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"

@@ -77,7 +77,7 @@ const CropperModal = ({ image, onCropComplete, onCancel }) => {
                     <div className="p-8 space-y-6">
                         <div className="space-y-4">
                             <div className="flex items-center justify-between text-xs font-black text-slate-400 uppercase tracking-widest px-1">
-                                <span>تكبير / تصغير</span>
+                                <span id="Zoom">تكبير / تصغير</span>
                                 <span className="text-blue-500">{Math.round(zoom * 100)}%</span>
                             </div>
                             <div className="flex items-center gap-4">
@@ -88,6 +88,8 @@ const CropperModal = ({ image, onCropComplete, onCancel }) => {
                                     <ZoomOut size={18} />
                                 </button>
                                 <input
+                                    id="zoom_range"
+                                    name="zoom_range"
                                     type="range"
                                     value={zoom}
                                     min={1}

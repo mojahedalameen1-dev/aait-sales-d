@@ -113,6 +113,9 @@ export default function ClientsList({ filter }) {
         <div style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
           <Search size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: textSecondary }} />
           <input
+            id="search_clients"
+            name="search_clients"
+            aria-label="ابحث عن عميل، قطاع، أو مدينة..."
             className="form-input"
             placeholder="ابحث عن عميل، قطاع، أو مدينة..."
             style={{ paddingRight: '48px', height: '48px', background: isDark ? 'rgba(0,0,0,0.2)' : '#fff' }}
@@ -147,8 +150,10 @@ export default function ClientsList({ filter }) {
 
         {/* Sort */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', color: textSecondary, fontWeight: 500 }}><SlidersHorizontal size={14} /> ترتيب حسب:</span>
+          <label htmlFor="sort_by" style={{ fontSize: '13px', color: textSecondary, fontWeight: 500 }}><SlidersHorizontal size={14} /> ترتيب حسب:</label>
           <select
+            id="sort_by"
+            name="sort_by"
             className="form-input"
             style={{ width: '140px', height: '44px', fontSize: '13px', padding: '0 12px' }}
             value={sortBy}

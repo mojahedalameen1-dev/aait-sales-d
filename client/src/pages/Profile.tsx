@@ -170,6 +170,8 @@ export default function Profile() {
                                             <Camera size={18} />
                                         </button>
                                         <input 
+                                            id="profileImage"
+                                            name="profileImage"
                                             type="file" 
                                             ref={fileInputRef} 
                                             onChange={handleImageChange} 
@@ -185,8 +187,10 @@ export default function Profile() {
 
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">الاسم الكامل</label>
+                                        <label htmlFor="fullName" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">الاسم الكامل</label>
                                         <input 
+                                            id="fullName"
+                                            name="fullName"
                                             type="text" 
                                             value={fullName}
                                             onChange={(e) => setFullName(e.target.value)}
@@ -227,8 +231,10 @@ export default function Profile() {
                             
                             <form onSubmit={handleChangePassword} className="p-8 space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">كلمة المرور الحالية</label>
+                                    <label htmlFor="oldPassword" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">كلمة المرور الحالية</label>
                                     <input 
+                                        id="oldPassword"
+                                        name="oldPassword"
                                         type="password" 
                                         value={oldPassword}
                                         onChange={(e) => setOldPassword(e.target.value)}
@@ -237,8 +243,10 @@ export default function Profile() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">كلمة المرور الجديدة</label>
+                                    <label htmlFor="newPassword" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">كلمة المرور الجديدة</label>
                                     <input 
+                                        id="newPassword"
+                                        name="newPassword"
                                         type="password" 
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
@@ -247,8 +255,10 @@ export default function Profile() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">تأكيد كلمة المرور</label>
+                                    <label htmlFor="confirmPassword" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">تأكيد كلمة المرور</label>
                                     <input 
+                                        id="confirmPassword"
+                                        name="confirmPassword"
                                         type="password" 
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}

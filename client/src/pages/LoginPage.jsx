@@ -78,9 +78,11 @@ const LoginPage = () => {
                     )}
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mr-1">اسم المستخدم</label>
+                        <label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mr-1">اسم المستخدم</label>
                         <div className="relative">
                             <input
+                                id="username"
+                                name="username"
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
@@ -97,9 +99,11 @@ const LoginPage = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mr-1">كلمة المرور</label>
+                        <label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mr-1">كلمة المرور</label>
                         <div className="relative">
                             <input
+                                id="password"
+                                name="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

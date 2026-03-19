@@ -8,10 +8,20 @@ const logActivity = require('../helpers/activityLogger');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-// const sharp = require('sharp');
+const sharp = require('sharp');
 
-const uploadsDir = path.join(__dirname, '..', 'uploads', 'profiles');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const isVercel = process.env.VERCEL === '1';
+const uploadsDir = isVercel 
+  ? path.join('/tmp', 'uploads', 'profiles') 
+  : path.join(__dirname, '..', 'uploads', 'profiles');
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (err) {
+  console.error('Failed to create profiles upload directory:', err.message);
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),

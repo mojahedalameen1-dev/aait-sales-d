@@ -14,7 +14,13 @@ export default function Profile() {
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState(user?.id === 0 ? { type: 'error', text: 'حساب المشرف العام (System Admin) هو حساب نظام افتراضي وغير قابل للتعديل. يرجى استخدام حسابك الشخصي المنشأ في قاعدة البيانات لتعديل البيانات.' } : { type: '', text: '' });
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [previewUrl, setPreviewUrl] = useState(user?.profileImageUrl ? (user.profileImageUrl.startsWith('http') ? user.profileImageUrl : API_URL(user.profileImageUrl)) : null);
+    const [previewUrl, setPreviewUrl] = useState(user?.profileImageUrl ? (user.profileImageUrl.startsWith('http') || user.profileImageUrl.startsWith('data:') ? user.profileImageUrl : API_URL(user.profileImageUrl)) : null);
+
+    // Sync state when user changes (e.g. after login/logout)
+    React.useEffect(() => {
+        setFullName(user?.fullName || '');
+        setPreviewUrl(user?.profileImageUrl ? (user.profileImageUrl.startsWith('http') || user.profileImageUrl.startsWith('data:') ? user.profileImageUrl : API_URL(user.profileImageUrl)) : null);
+    }, [user]);
     
     // Cropper State
     const [tempImage, setTempImage] = useState<string | null>(null);

@@ -207,7 +207,7 @@ export default function MeetingPrepHub() {
       console.warn('Pre-analysis save failed, continuing anyway...', e);
     }
 
-    const streamUrl = new URL(API_URL(`/api/analyze-prep/stream/${activePrepId}`));
+    const streamUrl = new URL(API_URL(`/api/analyze-prep/stream/${activePrepId}`), window.location.origin);
     if (token) {
         streamUrl.searchParams.append('token', token);
     }

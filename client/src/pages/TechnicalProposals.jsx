@@ -66,7 +66,7 @@ export default function TechnicalProposals() {
   // Resilient JSON extraction helper
   const extractJSON = (text) => {
     if (!text) return null;
-    
+
     // Attempt to find JSON block strictly
     let match = text.match(/```json\s*([\s\S]*?)\s*```/);
     let jsonStr = match ? match[1] : null;
@@ -81,7 +81,7 @@ export default function TechnicalProposals() {
         let closeBraces = (jsonStr.match(/}/g) || []).length;
         let openBrackets = (jsonStr.match(/\[/g) || []).length;
         let closeBrackets = (jsonStr.match(/]/g) || []).length;
-        
+
         jsonStr += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
         jsonStr += '}'.repeat(Math.max(0, openBraces - closeBraces));
       }
@@ -103,16 +103,16 @@ export default function TechnicalProposals() {
     if (status === 'done' && result && processedResultRef.current !== result) {
       processedResultRef.current = result;
       const fullText = result.proposal || result;
-      
+
       const aiStructuredData = extractJSON(fullText);
-      
+
       // Clean up text for the UI: remove ANY code blocks that look like JSON metadata
       const cleanProposal = fullText.replace(/```json[\s\S]*?```/g, '')
-                                   .replace(/```json[\s\S]*$/g, '') // Handle unclosed blocks
-                                   .trim();
+        .replace(/```json[\s\S]*$/g, '') // Handle unclosed blocks
+        .trim();
 
       setFormData(prev => ({ ...prev, proposalText: cleanProposal }));
-      
+
       if (aiStructuredData) {
         // Merge extracted data into formData as well to ensure they are sent in export
         setFormData(prev => ({
@@ -146,9 +146,9 @@ export default function TechnicalProposals() {
       const p = parseFloat(formData.price) || 0;
       const v = p * 0.15;
       const totalVal = p + v;
-      setFormData(prev => ({ 
-        ...prev, 
-        vat: v.toFixed(2), 
+      setFormData(prev => ({
+        ...prev,
+        vat: v.toFixed(2),
         total: totalVal.toFixed(2),
         formattedPrice: formatSAR(p),
         formattedVat: formatSAR(v),
@@ -175,7 +175,7 @@ export default function TechnicalProposals() {
 
     const streamUrl = new URL(API_URL('/api/proposals/stream'), window.location.origin);
     if (token) {
-        streamUrl.searchParams.append('token', token);
+      streamUrl.searchParams.append('token', token);
     }
     startStream(streamUrl.toString(), {
       method: 'POST',
@@ -253,30 +253,30 @@ export default function TechnicalProposals() {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 md:col-span-1">
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>اسم العميل</label>
-              <input 
-                name="clientName" value={formData.clientName} onChange={handleInputChange} 
+              <input
+                name="clientName" value={formData.clientName} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
                 placeholder="شركة مثال المحدودة"
               />
             </div>
             <div className="col-span-2 md:col-span-1">
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>تاريخ العرض</label>
-              <input 
-                type="date" name="date" value={formData.date} onChange={handleInputChange} 
+              <input
+                type="date" name="date" value={formData.date} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
               />
             </div>
             <div className="col-span-2 md:col-span-1">
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>رقم العرض</label>
-              <input 
-                name="offerNumber" value={formData.offerNumber} onChange={handleInputChange} 
+              <input
+                name="offerNumber" value={formData.offerNumber} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
               />
             </div>
             <div className="col-span-2 md:col-span-1">
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>مدير المشروع</label>
-              <input 
-                name="managerName" value={formData.managerName} onChange={handleInputChange} 
+              <input
+                name="managerName" value={formData.managerName} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
                 placeholder="م. محمد القحطاني"
               />
@@ -287,7 +287,7 @@ export default function TechnicalProposals() {
             <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>تفاصيل الاجتماع / الفكرة</label>
             <textarea
               name="meetingNotes" value={formData.meetingNotes} onChange={handleInputChange}
-              className="w-full min-h-[150px] p-4 rounded-xl border bg-transparent text-sm leading-relaxed" 
+              className="w-full min-h-[150px] p-4 rounded-xl border bg-transparent text-sm leading-relaxed"
               style={{ borderColor: border, color: textPrimary }}
               placeholder="اكتب هنا ما تم مناقشته في الاجتماع..."
             />
@@ -303,22 +303,22 @@ export default function TechnicalProposals() {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>وصف الخدمة (للجدول المالي)</label>
-              <input 
-                name="serviceDescription" value={formData.serviceDescription} onChange={handleInputChange} 
+              <input
+                name="serviceDescription" value={formData.serviceDescription} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
               />
             </div>
             <div>
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>المبلغ (ريال)</label>
-              <input 
-                type="number" name="price" value={formData.price} onChange={handleInputChange} 
+              <input
+                type="number" name="price" value={formData.price} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
               />
             </div>
             <div>
               <label className="block mb-2 text-sm font-bold" style={{ color: textPrimary }}>مدة التنفيذ (أيام)</label>
-              <input 
-                type="number" name="durationDays" value={formData.durationDays} onChange={handleInputChange} 
+              <input
+                type="number" name="durationDays" value={formData.durationDays} onChange={handleInputChange}
                 className="w-full p-3 rounded-xl border bg-transparent" style={{ borderColor: border, color: textPrimary }}
               />
             </div>
@@ -331,7 +331,7 @@ export default function TechnicalProposals() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => handleExport('docx')} disabled={exportingDocx || !formData.proposalText}
                     className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-sm font-bold flex items-center gap-2 hover:bg-blue-500 hover:text-white transition-all disabled:opacity-30"
                   >
@@ -350,7 +350,7 @@ export default function TechnicalProposals() {
                   </div>
                   <h3 className="text-2xl font-black text-white mb-4 animate-pulse">{message || 'جاري توليد العرض...'}</h3>
                   <div className="w-full max-w-md h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/10">
-                    <motion.div 
+                    <motion.div
                       className="h-full rounded-full bg-gradient-to-r from-blue-600 to-purple-600"
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}

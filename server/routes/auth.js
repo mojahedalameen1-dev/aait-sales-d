@@ -102,51 +102,55 @@ router.get('/me', authenticateJWT, async (req, res) => {
 
 // Update profile
 router.put('/profile', authenticateJWT, uploadMemory.single('profileImage'), async (req, res) => {
-  const { fullName } = req.body;
-  const userId = req.user.id;
+    const { fullName, removeImage } = req.body;
+    const userId = req.user.id;
+    
+    if (userId === 0) return res.status(403).json({ error: 'حساب المشرف العام غير قابل للتعديل' });
   
-  if (userId === 0) return res.status(403).json({ error: 'حساب المشرف العام غير قابل للتعديل' });
+    try {
+    let profileImageUrl = undefined; // Use undefined to indicate no change by default
+    let shouldUpdateImage = false;
 
-  try {
-    let profileImageUrl = null;
     if (req.file) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const filename = `profile-${uniqueSuffix}.jpg`;
-      const outputPath = path.join(uploadsDir, filename);
-      
-      await sharp(req.file.buffer)
-        .resize(512, 512, { fit: 'cover' })
-        .jpeg({ quality: 80 })
-        .toFile(outputPath);
+      // Process with sharp and convert to Base64 for persistent storage in DB (Better for Vercel)
+      const buffer = await sharp(req.file.buffer)
+        .resize(400, 400, { fit: 'cover' }) // Slightly smaller for DB efficiency
+        .jpeg({ quality: 75 }) // Good balance of quality and size
+        .toBuffer();
         
-      profileImageUrl = `/uploads/profiles/${filename}`;
+      const base64 = buffer.toString('base64');
+      profileImageUrl = `data:image/jpeg;base64,${base64}`;
+      shouldUpdateImage = true;
+    } else if (removeImage === 'true' || removeImage === true) {
+      profileImageUrl = null;
+      shouldUpdateImage = true;
     }
 
     let query = 'UPDATE users SET full_name = $1';
     let params = [fullName];
     
-    if (profileImageUrl) {
+    if (shouldUpdateImage) {
       query += ', profile_image_url = $2 WHERE id = $3 RETURNING *';
       params.push(profileImageUrl, userId);
     } else {
       query += ' WHERE id = $2 RETURNING *';
       params.push(userId);
     }
-
-    const result = await db.query(query, params);
-    const user = result.rows[0];
-
-    res.json({
-      message: 'تم تحديث الملف الشخصي بنجاح',
-      user: {
-        id: user.id,
-        username: user.username,
-        isAdmin: user.is_admin,
-        isPrimaryAdmin: user.is_primary_admin,
-        fullName: user.full_name,
-        profileImageUrl: user.profile_image_url
-      }
-    });
+  
+      const result = await db.query(query, params);
+      const user = result.rows[0];
+  
+      res.json({
+        message: 'تم تحديث الملف الشخصي بنجاح',
+        user: {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.is_admin,
+          isPrimaryAdmin: user.is_primary_admin,
+          fullName: user.full_name,
+          profileImageUrl: user.profile_image_url
+        }
+      });
 
     await logActivity(userId, 'update_profile', 'قام بتحديث بيانات الملف الشخصي');
   } catch (err) {

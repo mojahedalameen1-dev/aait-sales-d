@@ -237,15 +237,24 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
             className={`flex items-center gap-3 mb-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 p-2 rounded-2xl transition-all ${actualCollapsed ? 'justify-center' : ''}`}
             onClick={() => navigate('/profile')}
           >
-             <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold overflow-hidden border border-blue-500/20">
+             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center text-blue-500 dark:text-cyan-400 font-black overflow-hidden border-2 border-white dark:border-slate-800 shadow-md ring-1 ring-blue-500/10">
                 {user?.profileImageUrl ? (
                   <img 
                     src={user.profileImageUrl.startsWith('http') ? user.profileImageUrl : API_URL(user.profileImageUrl)} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
+                    alt="" 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const parent = e.target.parentElement;
+                      if (parent) {
+                        const span = document.createElement('span');
+                        span.innerText = (user?.fullName || user?.username || 'U').charAt(0).toUpperCase();
+                        parent.appendChild(span);
+                      }
+                    }}
                   />
                 ) : (
-                  (user?.fullName || user?.username || 'U').charAt(0).toUpperCase()
+                  <span className="text-lg">{(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}</span>
                 )}
              </div>
              {!actualCollapsed && (

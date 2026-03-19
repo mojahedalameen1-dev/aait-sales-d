@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import CropperModal from '../components/CropperModal';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
-import { User, Lock, Camera, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Lock, Camera, Save, AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export default function Profile() {
     const { user, apiFetch, updateUser } = useAuth();
@@ -20,6 +20,7 @@ export default function Profile() {
     const [tempImage, setTempImage] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
     const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+    const [removeImage, setRemoveImage] = useState(false);
 
     const showMsg = (type, text) => {
         setMsg({ type, text });
@@ -44,6 +45,14 @@ export default function Profile() {
         setPreviewUrl(URL.createObjectURL(blob));
         setShowCropper(false);
         setTempImage(null);
+        setRemoveImage(false); // Reset remove flag if a new image is cropped
+    };
+
+    const handleRemoveImage = () => {
+        setPreviewUrl(null);
+        setCroppedBlob(null);
+        setRemoveImage(true);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleUpdateProfile = async (e) => {
@@ -52,9 +61,11 @@ export default function Profile() {
         try {
             const formData = new FormData();
             formData.append('fullName', fullName);
+            formData.append('removeImage', removeImage.toString());
+            
             if (croppedBlob) {
                 formData.append('profileImage', croppedBlob, 'profile.jpg');
-            } else if (fileInputRef.current?.files?.[0]) {
+            } else if (fileInputRef.current?.files?.[0] && !removeImage) {
                 formData.append('profileImage', fileInputRef.current.files[0]);
             }
 
@@ -151,24 +162,53 @@ export default function Profile() {
                             
                             <form onSubmit={handleUpdateProfile} className="p-8 space-y-8">
                                 {/* Profile Picture Upload */}
-                                <div className="flex flex-col items-center sm:flex-row sm:items-center gap-8">
+                                <div className="flex flex-col items-center sm:flex-row sm:items-center gap-10">
                                     <div className="relative group">
-                                        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 dark:border-white/10 shadow-xl bg-slate-50 dark:bg-white/5 shrink-0 mx-auto sm:mx-0">
-                                            {previewUrl ? (
-                                                <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-4xl font-black text-slate-300">
-                                                    {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                                        <div className="w-40 h-40 rounded-full p-1 bg-gradient-to-tr from-blue-500 via-cyan-400 to-blue-600 shadow-2xl">
+                                            <div className="w-full h-full rounded-full overflow-hidden border-4 border-white dark:border-slate-900 bg-slate-50 dark:bg-slate-800 relative group">
+                                                {previewUrl ? (
+                                                    <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-5xl font-black text-slate-300 dark:text-slate-700 bg-slate-100 dark:bg-slate-800/50">
+                                                        {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Overlay on hover */}
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-all scale-90 group-hover:scale-100"
+                                                    >
+                                                        <Camera size={24} />
+                                                    </button>
                                                 </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="absolute -bottom-2 flex gap-2 w-full justify-center">
+                                            <button 
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform cursor-pointer border-2 border-white dark:border-slate-900"
+                                                title="تغيير الصورة"
+                                            >
+                                                <Camera size={18} />
+                                            </button>
+                                            
+                                            {previewUrl && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleRemoveImage}
+                                                    className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform cursor-pointer border-2 border-white dark:border-slate-900"
+                                                    title="حذف الصورة"
+                                                >
+                                                    <X size={18} className="text-white" />
+                                                </button>
                                             )}
                                         </div>
-                                        <button 
-                                            type="button"
-                                            onClick={() => fileInputRef.current.click()}
-                                            className="absolute bottom-0 right-0 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                                        >
-                                            <Camera size={18} />
-                                        </button>
+
                                         <input 
                                             id="profileImage"
                                             name="profileImage"
@@ -179,9 +219,15 @@ export default function Profile() {
                                             accept="image/*" 
                                         />
                                     </div>
-                                    <div className="flex-1 text-center sm:text-right">
-                                        <h4 className="font-black text-slate-900 dark:text-white mb-1">صورة الملف الشخصي</h4>
-                                        <p className="text-xs text-slate-400 font-bold">تظهر صورتك في القائمة الجانبية والتقارير. يفضل أن تكون مربعة وبحجم أقل من 5 ميجابايت.</p>
+                                    <div className="flex-1 text-center sm:text-right space-y-2">
+                                        <h4 className="font-black text-xl text-slate-900 dark:text-white mb-1">صورتك الشخصية</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs">
+                                            هذه الصورة هي هويتك في النظام، ستظهر لزملائك وفي التقارير الذكية.
+                                        </p>
+                                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-bold text-slate-500 tracking-wider">JPG, PNG</span>
+                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-bold text-slate-500 tracking-wider">MAX 10MB</span>
+                                        </div>
                                     </div>
                                 </div>
 

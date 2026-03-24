@@ -29,12 +29,63 @@ const adminNavItems = [
 
 export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobileOpen, setIsMobileOpen }) {
   const { isDark, toggleTheme } = useTheme();
-  const { user, logout, isAdmin, apiFetch } = useAuth();
+  const { user, logout, isAdmin, isSalesLead, role, apiFetch } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [overdueDealsCount, setOverdueDealsCount] = useState(0);
 
-  const dynamicNavItems = isAdmin ? [...adminNavItems] : [...navItems];
+  // Define All possible nav items
+  const ALL_ITEMS = {
+    dashboard: { to: '/', label: 'لوحة التحكم', icon: LayoutDashboard, exact: true },
+    adminHome: { to: '/global-target', label: 'الرئيسية', icon: Target },
+    target: { to: '/global-target', label: 'التارقت العام', icon: Target },
+    slack: { to: '/slack-mentions', label: 'منشنات Slack', icon: Bell },
+    meetings: { to: '/meeting-preps', label: 'تحضير الاجتماعات', icon: Presentation },
+    proposals: { to: '/proposals', label: 'العروض الفنية', icon: FileText },
+    pipeline: { to: '/pipeline', label: 'بورد التقفيل', icon: KanbanSquare },
+    // Core Admin items
+    adminOverview: { to: '/admin', label: 'نظرة عامة', icon: LayoutDashboard, exact: true },
+    team: { to: '/admin/team', label: 'إدارة الفريق', icon: Users },
+    settings: { to: '/admin/settings', label: 'الإعدادات', icon: ShieldCheck },
+  };
+
+  const getNavItemsByRole = () => {
+    // Admin Role
+    if (role === 'admin' || isAdmin) {
+      return [
+        ALL_ITEMS.adminHome,
+        ALL_ITEMS.slack,
+        ALL_ITEMS.meetings,
+        ALL_ITEMS.proposals,
+        ALL_ITEMS.pipeline,
+        ALL_ITEMS.team,
+        ALL_ITEMS.settings
+      ];
+    }
+    
+    // Sales Lead Role
+    if (role === 'salesLead') {
+      return [
+        ALL_ITEMS.dashboard,
+        ALL_ITEMS.slack,
+        ALL_ITEMS.meetings,
+        ALL_ITEMS.proposals,
+        ALL_ITEMS.pipeline
+      ];
+    }
+    
+    // Developer Role (Default)
+    return [
+      ALL_ITEMS.dashboard,
+      ALL_ITEMS.target,
+      ALL_ITEMS.slack,
+      ALL_ITEMS.meetings,
+      ALL_ITEMS.proposals,
+      ALL_ITEMS.pipeline
+    ];
+  };
+
+  const dynamicNavItems = getNavItemsByRole();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -263,7 +314,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, isMobile, isMobil
                  <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
                    م {user?.fullName || user?.username}
                  </div>
-                 <div className="text-[10px] text-slate-500 uppercase tracking-widest">{user?.role || (isAdmin ? 'مدير' : 'مطور أعمال')}</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                    {role === 'admin' ? 'إدارة' : role === 'salesLead' ? 'قائد مبيعات' : 'مطور أعمال'}
+                  </div>
                </div>
              )}
           </div>

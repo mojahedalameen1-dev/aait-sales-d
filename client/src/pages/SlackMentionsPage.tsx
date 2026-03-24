@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../hooks/useSocket';
+import { useTheme } from '../context/ThemeContext';
 import { API_URL } from '../utils/apiConfig';
 
 interface SlackMention {
@@ -98,7 +99,92 @@ function formatFullDate(dateStr: string): string {
   }).replace('،', ' -');
 }
 
+function formatMentionCount(n: number): string {
+  if (n === 0) return 'لا توجد منشنات';
+  if (n === 1 || n === 2) return `${n} منشن`;
+  if (n >= 3 && n <= 10) return `${n} منشنات`;
+  return `${n} منشن`;
+}
+
+function TimelineChart({ data, isDark }: { data: { day: string; count: number }[]; isDark: boolean }) {
+  if (!data?.length) return null;
+  const max = Math.max(...data.map(d => d.count), 5);
+  const width = 800;
+  const height = 120;
+  const points = data.map((d, i) => ({
+    x: (i / (data.length - 1)) * width,
+    y: height - (d.count / max) * height
+  }));
+
+  const pathD = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+  const areaD = `${pathD} L ${width},${height} L 0,${height} Z`;
+
+  return (
+    <div className="relative w-full h-[140px] mt-4">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <motion.path
+          d={areaD} fill="url(#chartGradient)"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}
+        />
+        <motion.path
+          d={pathD} fill="none" stroke="#8B5CF6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, ease: "easeInOut" }}
+        />
+        {points.map((p, i) => (
+          <motion.circle
+            key={i} cx={p.x} cy={p.y} r="4"
+            fill={isDark ? '#0F1629' : '#FFFFFF'} stroke="#8B5CF6" strokeWidth="2"
+            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1 + i * 0.05 }}
+          />
+        ))}
+      </svg>
+      <div className="flex justify-between mt-2 px-1">
+        {data.filter((_, i) => i % 3 === 0).map((d, i) => (
+          <span key={i} className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
+            {new Date(d.day).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChannelActivityChart({ channels, isDark }: { channels: any[]; isDark: boolean }) {
+  if (!channels?.length) return null;
+  const max = Math.max(...channels.map(c => c.count), 1);
+  return (
+    <div className="space-y-5">
+      {channels.slice(0, 4).map((ch, i) => {
+        const pct = (ch.count / max) * 100;
+        const color = Object.values(CHANNEL_COLORS)[i % 6];
+        const name = CHANNEL_NAMES[ch.channel_id] || ch.channel_id;
+        return (
+          <div key={ch.channel_id} className="space-y-2">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className={`font-black ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{name}</span>
+              <span className={`font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{ch.count}</span>
+            </div>
+            <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
+              <motion.div
+                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.5, ease: "easeOut" }}
+                className={`h-full bg-gradient-to-r ${color} rounded-full`}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MentionCard({ mention, onMarkRead, idx }: { mention: SlackMention; onMarkRead: (id: string) => void; idx: number }) {
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const color = CHANNEL_COLORS[mention.channel_id] || 'from-slate-500 to-slate-600';
   const name = CHANNEL_NAMES[mention.channel_id] || mention.channel_id;
@@ -107,14 +193,15 @@ function MentionCard({ mention, onMarkRead, idx }: { mention: SlackMention; onMa
   return (
     <motion.article
       key={mention.id}
+      layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ delay: idx * 0.03, type: 'spring', stiffness: 300, damping: 25 }}
       className={`group relative rounded-2xl transition-all duration-300 ${
         mention.is_read
-          ? 'bg-white/[0.01] border border-white/5 hover:bg-white/[0.03]'
-          : 'bg-white/[0.04] border border-white/10 hover:bg-white/[0.06] shadow-2xl shadow-black/20'
+          ? isDark ? 'bg-white/[0.01] border border-white/5 hover:bg-white/[0.03]' : 'bg-slate-50 border border-slate-200 hover:bg-slate-100'
+          : isDark ? 'bg-white/[0.04] border border-white/10 hover:bg-white/[0.06] shadow-2xl shadow-black/20' : 'bg-white border border-slate-200 shadow-xl shadow-slate-200/50 hover:border-purple-200'
       }`}
     >
       <div className="p-4 sm:p-5">
@@ -165,7 +252,7 @@ function MentionCard({ mention, onMarkRead, idx }: { mention: SlackMention; onMa
             </div>
 
             {/* Message body */}
-            <div className={`relative text-sm leading-7 text-slate-300 ${!expanded && isLong ? 'line-clamp-3' : ''}`}
+            <div className={`relative text-sm leading-7 ${isDark ? 'text-slate-300' : 'text-slate-600'} ${!expanded && isLong ? 'line-clamp-3' : ''}`}
               dir="auto">
               {parseSlackText(mention.text)}
             </div>
@@ -173,7 +260,7 @@ function MentionCard({ mention, onMarkRead, idx }: { mention: SlackMention; onMa
             {isLong && (
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="mt-3 flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-purple-400 transition-colors"
+                className={`mt-3 flex items-center gap-1 text-[11px] font-bold transition-colors ${isDark ? 'text-slate-500 hover:text-purple-400' : 'text-slate-400 hover:text-purple-600'}`}
               >
                 <ChevronDown size={12} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
                 {expanded ? 'طي الرسالة' : 'توسيع الرسالة'}
@@ -187,11 +274,13 @@ function MentionCard({ mention, onMarkRead, idx }: { mention: SlackMention; onMa
 }
 
 export default function SlackMentionsPage() {
+  const { isDark } = useTheme();
   const { apiFetch } = useAuth();
   const { socket, connected } = useSocket();
   const [mentions, setMentions] = useState<SlackMention[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoaded, setIsInitialLoaded] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [customDates, setCustomDates] = useState({ from: '', to: '' });
@@ -248,10 +337,13 @@ export default function SlackMentionsPage() {
   }, [apiFetch, fetchMentions, fetchStats, activeFilter, showToast]);
 
   useEffect(() => {
-    fetchMentions(activeFilter);
+    fetchMentions(activeFilter).then(() => {
+      setIsInitialLoaded(true);
+      setLoading(false);
+    });
     fetchStats();
     handleSync(true);
-    syncIntervalRef.current = setInterval(() => handleSync(true), 10000); // 10s for better real-time feel
+    syncIntervalRef.current = setInterval(() => handleSync(true), 45000); // Increased interval to reduce flicker
     return () => { if (syncIntervalRef.current) clearInterval(syncIntervalRef.current); };
   }, [activeFilter, fetchMentions, fetchStats, handleSync]);
 
@@ -315,48 +407,66 @@ export default function SlackMentionsPage() {
       </AnimatePresence>
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-purple-500/20">
-              <Bell size={24} className="text-white" />
-            </div>
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -left-1 w-6 h-6 bg-amber-500 text-black text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[#0a0a0a]">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">صندوق الإشارات</h1>
-            <div className="flex items-center gap-2 mt-1">
-              {connected ? (
-                <span className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-black">
-                  <Radio size={10} className="animate-pulse" /> متزامن مباشر
-                </span>
-              ) : (
-                <span className="text-[11px] text-slate-500">جاري الاتصال...</span>
+      <div className={`p-8 rounded-[40px] relative overflow-hidden transition-all duration-500 ${
+        isDark ? 'bg-white/[0.02] border border-white/5' : 'bg-white border border-slate-200 shadow-2xl shadow-slate-200/40'
+      }`}>
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div className="flex items-center gap-5">
+            <div className="relative group">
+              <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-purple-500/30 group-hover:scale-105 transition-transform duration-500">
+                <Bell size={32} className="text-white animate-bounce-slow" />
+              </div>
+              {unreadCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  className="absolute -top-2 -left-2 w-7 h-7 bg-amber-500 text-black text-[11px] font-black rounded-full flex items-center justify-center border-4 border-white dark:border-[#0a0a0a]"
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </motion.span>
               )}
             </div>
+            <div>
+              <h1 className={`text-3xl font-black tracking-tight mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>صندوق الإشارات</h1>
+              <div className="flex items-center gap-2">
+                {connected ? (
+                  <span className={`flex items-center gap-1.5 text-xs font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> متصل بـ Slack
+                  </span>
+                ) : isInitialLoaded ? (
+                  <span className="text-xs text-slate-500 flex items-center gap-1.5 font-bold">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> وضع القراءة (تحديث تلقائي)
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-500 flex items-center gap-2">
+                    <RefreshCw size={12} className="animate-spin" /> جاري المزامنة...
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {unreadCount > 0 && (
+              <button onClick={markAllAsRead}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 text-xs font-black rounded-2xl transition-all ${
+                  isDark ? 'text-slate-400 hover:text-white border border-white/5 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+                }`}>
+                <EyeOff size={16} /> قرأت الكل
+              </button>
+            )}
+            <button
+              onClick={() => handleSync(false)}
+              disabled={syncing}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black rounded-2xl transition-all shadow-xl shadow-purple-600/20 disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+              {syncing ? 'يتم التحديث...' : 'تحديث البيانات'}
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {unreadCount > 0 && (
-            <button onClick={markAllAsRead}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-white border border-white/5 hover:bg-white/5 rounded-xl transition-all">
-              <EyeOff size={14} /> قرأت الكل
-            </button>
-          )}
-          <button
-            onClick={() => handleSync(false)}
-            disabled={syncing}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'جاري التحديث...' : 'مزامنة الآن'}
-          </button>
-        </div>
+        {/* ── Trend Chart Integration ── */}
+        {stats?.trends && <TimelineChart data={stats.trends} isDark={isDark} />}
       </div>
 
       {/* ── Stats Row ── */}
@@ -367,11 +477,17 @@ export default function SlackMentionsPage() {
           { label: 'نسبة الإنجاز', value: `${readRate}%`, icon: <Star size={16}/>, color: 'emerald' },
           { label: 'القنوات النشطة', value: stats?.topChannels.length || 0, icon: <Layers size={16}/>, color: 'blue' },
         ].map(({ label, value, icon, color }) => (
-          <div key={label} className="rounded-2xl p-5 bg-white/[0.01] border border-white/5 backdrop-blur-3xl group hover:bg-white/[0.03] transition-all">
-            <div className={`w-9 h-9 rounded-xl bg-${color}-500/10 flex items-center justify-center text-${color}-400 mb-4`}>
+          <div key={label} className={`rounded-2xl p-5 backdrop-blur-3xl group transition-all ${
+            isDark 
+              ? 'bg-white/[0.01] border border-white/5 hover:bg-white/[0.03]' 
+              : 'bg-white border border-slate-200 shadow-sm hover:border-purple-200 shadow-slate-200/50'
+          }`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 ${
+              isDark ? `bg-${color}-500/10 text-${color}-400` : `bg-${color}-50 text-${color}-600`
+            }`}>
               {icon}
             </div>
-            <div className="text-2xl font-black text-white mb-1 tracking-tight">{value}</div>
+            <div className={`text-2xl font-black mb-1 tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{value}</div>
             <div className="text-[11px] font-bold text-slate-500">{label}</div>
           </div>
         ))}
@@ -382,25 +498,32 @@ export default function SlackMentionsPage() {
         <div className="lg:col-span-3 space-y-6">
           
           {/* Controls */}
-          <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-3 flex flex-wrap items-center gap-3">
+          <div className={`rounded-2xl p-3 flex flex-wrap items-center gap-3 ${
+            isDark ? 'bg-white/[0.01] border border-white/5' : 'bg-slate-50 border border-slate-200'
+          }`}>
             <div className="flex gap-1">
               {FILTERS.map(f => (
                 <button key={f.id} onClick={() => setActiveFilter(f.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
                     activeFilter === f.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-500 hover:text-white hover:bg-white/[0.03]'
+                      ? isDark ? 'bg-white/10 text-white' : 'bg-white text-purple-600 shadow-sm ring-1 ring-slate-200'
+                      : isDark ? 'text-slate-500 hover:text-white hover:bg-white/[0.03]' : 'text-slate-500 hover:text-purple-600 hover:bg-white/50'
                   }`}>
                   {f.icon} {f.label}
                 </button>
               ))}
             </div>
             <div className="flex-1 min-w-[240px] relative">
-              <Search size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600" />
+              <Search size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
               <input
-                type="text" placeholder="ابحث في الأرشيف..."
+                type="text" placeholder="ابحث في المنشنات..."
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="w-full text-xs bg-white/[0.02] border border-white/5 rounded-xl pr-10 py-3 outline-none text-white focus:bg-white/[0.04] transition-all"
+                dir="rtl"
+                className={`w-full text-xs rounded-xl pr-10 pl-4 py-3 outline-none transition-all ${
+                  isDark 
+                    ? 'bg-white/[0.02] border border-white/5 text-white focus:bg-white/[0.04]' 
+                    : 'bg-slate-100 border border-slate-200 text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-200'
+                }`}
               />
             </div>
           </div>
@@ -431,11 +554,11 @@ export default function SlackMentionsPage() {
           {/* Summary */}
           <div className="rounded-3xl p-6 bg-gradient-to-br from-purple-600/10 to-transparent border border-purple-500/10 relative overflow-hidden">
             <div className="relative z-10">
-              <h3 className="text-xs font-black text-purple-400 mb-4 tracking-widest uppercase flex items-center gap-2">
+              <h3 className={`text-xs font-black mb-4 tracking-widest uppercase flex items-center gap-2 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
                 <Activity size={14} /> موجز الحالة
               </h3>
-              <div className="text-3xl font-black text-white mb-2">
-                {unreadCount > 0 ? `${unreadCount} منشن` : 'أنت حر'}
+              <div className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {formatMentionCount(unreadCount)}
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-bold">
                 {unreadCount > 0 
@@ -448,39 +571,19 @@ export default function SlackMentionsPage() {
 
           {/* Channels */}
           {stats?.topChannels && stats.topChannels.length > 0 && (
-            <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-6">
-              <h3 className="text-[11px] font-black text-slate-400 mb-6 flex items-center gap-2 uppercase tracking-tight">
-                <Hash size={14} className="text-slate-600" /> القنوات الأكثر تأثيراً
+            <div className={`rounded-3xl p-6 ${isDark ? 'bg-white/[0.01] border border-white/5' : 'bg-white border border-slate-200 shadow-sm'}`}>
+              <h3 className={`text-[11px] font-black mb-6 flex items-center gap-2 uppercase tracking-tight ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <Hash size={14} className={isDark ? 'text-slate-600' : 'text-slate-400'} /> القنوات الأكثر تأثيراً
               </h3>
-              <div className="space-y-5">
-                {stats.topChannels.slice(0, 4).map((ch, i) => {
-                  const pct = Math.round((ch.count / stats.topChannels[0].count) * 100);
-                  const color = Object.values(CHANNEL_COLORS)[i % 6];
-                  const name = CHANNEL_NAMES[ch.channel_id] || ch.channel_id;
-                  return (
-                    <div key={ch.channel_id} className="space-y-2">
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-slate-300 font-black">{name}</span>
-                        <span className="text-white font-black">{ch.count}</span>
-                      </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1 }}
-                          className={`h-full bg-gradient-to-r ${color} rounded-full`}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <ChannelActivityChart channels={stats.topChannels} isDark={isDark} />
             </div>
           )}
 
           {/* Activity Chart */}
           {stats?.hourlyDistribution && (
-            <div className="bg-white/[0.01] border border-white/5 rounded-3xl p-6">
-              <h3 className="text-[11px] font-black text-slate-400 mb-6 flex items-center gap-2 uppercase tracking-tight">
-                <BarChart3 size={14} className="text-slate-600" /> النشاط الساعي
+            <div className={`rounded-3xl p-6 ${isDark ? 'bg-white/[0.01] border border-white/5' : 'bg-white border border-slate-200 shadow-sm'}`}>
+              <h3 className={`text-[11px] font-black mb-6 flex items-center gap-2 uppercase tracking-tight ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <BarChart3 size={14} className={isDark ? 'text-slate-600' : 'text-slate-400'} /> النشاط الساعي
               </h3>
               <div className="flex items-end gap-1 h-20">
                 {Array.from({ length: 24 }, (_, h) => {

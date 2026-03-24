@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
 
     if (user && await bcrypt.compare(password, user.password_hash)) {
       const token = jwt.sign(
-        { id: user.id, username: user.username, isAdmin: user.is_admin, isPrimaryAdmin: user.is_primary_admin, fullName: user.full_name },
+        { id: user.id, username: user.username, isAdmin: user.is_admin, isPrimaryAdmin: user.is_primary_admin, fullName: user.full_name, role: user.role },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -83,7 +83,8 @@ router.post('/login', async (req, res) => {
           isAdmin: user.is_admin, 
           isPrimaryAdmin: user.is_primary_admin,
           fullName: user.full_name,
-          profileImageUrl: user.profile_image_url 
+          profileImageUrl: user.profile_image_url,
+          role: user.role
         }
       });
     } else {
@@ -105,7 +106,7 @@ router.get('/me', authenticateJWT, async (req, res) => {
       return res.json({ user: req.user });
     }
 
-    const result = await db.query('SELECT id, username, full_name, is_admin, is_primary_admin, is_active, profile_image_url FROM users WHERE id = $1', [userId]);
+    const result = await db.query('SELECT id, username, full_name, is_admin, is_primary_admin, is_active, profile_image_url, role FROM users WHERE id = $1', [userId]);
     const user = result.rows[0];
 
     if (!user) {
@@ -119,7 +120,8 @@ router.get('/me', authenticateJWT, async (req, res) => {
         isAdmin: user.is_admin,
         isPrimaryAdmin: user.is_primary_admin,
         fullName: user.full_name,
-        profileImageUrl: user.profile_image_url
+        profileImageUrl: user.profile_image_url,
+        role: user.role
       }
     });
   } catch (err) {

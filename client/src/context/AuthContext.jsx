@@ -103,7 +103,9 @@ export const AuthProvider = ({ children }) => {
         logout,
         apiFetch,
         updateUser,
-        isAdmin: user?.isAdmin || false
+        isAdmin: user?.isAdmin || user?.role === 'admin' || false,
+        isSalesLead: user?.role === 'salesLead' || false,
+        role: user?.role || 'developer'
     };
 
     return (

@@ -63,12 +63,10 @@ router.get('/sync-mentions', authenticateJWT, async (req, res) => {
         let latestTsInBatch = lastTs;
 
         for (const msg of messages) {
-          // Keep track of the latest TS to update our pointer
           if (parseFloat(msg.ts) > parseFloat(latestTsInBatch)) {
             latestTsInBatch = msg.ts;
           }
 
-          // Look for mentions <@UXXXX>
           const mentionMatches = msg.text.match(/<@U[A-Z0-9]+>/g);
           if (mentionMatches) {
             for (const match of mentionMatches) {
@@ -77,22 +75,29 @@ router.get('/sync-mentions', authenticateJWT, async (req, res) => {
 
               if (toUserId) {
                 try {
-                  // Attempt to insert (unique constraint (message_ts, to_user_id) will prevent duplicates)
+                  // Use to_timestamp to ensure created_at matches Slack's original message time
                   await db.query(
-                    `INSERT INTO slack_mentions (slack_event_id, channel_id, thread_ts, message_ts, from_slack_user_id, to_user_id, text)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING`,
-                    [`poll_${msg.ts}`, channelId, msg.thread_ts || null, msg.ts, msg.user, toUserId, msg.text]
+                    `INSERT INTO slack_mentions (slack_event_id, channel_id, thread_ts, message_ts, from_slack_user_id, to_user_id, text, created_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8)) ON CONFLICT DO NOTHING`,
+                    [`poll_${msg.ts}`, channelId, msg.thread_ts || null, msg.ts, msg.user, toUserId, msg.text, parseFloat(msg.ts)]
                   );
                   results.newMentions++;
-                } catch (dbErr) {
-                  // Ignore unique constraint errors
-                }
+                  
+                  // Notify the specific user instantly
+                  const io = req.app.get('io');
+                  if (io) {
+                    io.to(`user_${toUserId}`).emit('new_mention', {
+                      channel_id: channelId,
+                      text: msg.text,
+                      ts: msg.ts
+                    });
+                  }
+                } catch (dbErr) { /* ignore */ }
               }
             }
           }
         }
 
-        // 3. Update sync status
         await db.query(
           `INSERT INTO slack_sync_status (channel_id, last_ts, updated_at)
            VALUES ($1, $2, NOW())
@@ -107,7 +112,6 @@ router.get('/sync-mentions', authenticateJWT, async (req, res) => {
       }
     }
 
-    // Emit socket event if there are new mentions for anyone
     if (results.newMentions > 0) {
       const io = req.app.get('io');
       if (io) io.emit('mentions_synced', { count: results.newMentions });
@@ -117,6 +121,48 @@ router.get('/sync-mentions', authenticateJWT, async (req, res) => {
   } catch (err) {
     console.error('Global sync error:', err);
     res.status(500).json({ error: 'حدث خطأ أثناء مزامنة المنشنات' });
+  }
+});
+
+/**
+ * GET /api/slack/oauth/callback
+ * Handles the redirect from Slack after app installation/authentication.
+ */
+router.get('/oauth/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.status(400).send('Missing code parameter');
+  }
+
+  try {
+    const slackRes = await axios.post('https://slack.com/api/oauth.v2.access', null, {
+      params: {
+        client_id: process.env.SLACK_CLIENT_ID,
+        client_secret: process.env.SLACK_CLIENT_SECRET,
+        code
+      }
+    });
+
+    if (!slackRes.data.ok) {
+      return res.status(400).send(`Slack Auth Error: ${slackRes.data.error}`);
+    }
+
+    // Capture tokens (You can save these in the DB or env vars)
+    // For now, we show a success message.
+    res.send(`
+      <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+        <h1 style="color: #4A154B;">تم الاتصال بـ Slack بنجاح! ✅</h1>
+        <p>يمكنك الآن إغلاق هذه النافذة والعودة للنظام.</p>
+        <div style="background: #f4f4f4; padding: 20px; border-radius: 10px; display: inline-block; margin-top: 20px;">
+          <strong>Workspace:</strong> ${slackRes.data.team?.name}<br>
+          <strong>App ID:</strong> ${slackRes.data.app_id}
+        </div>
+      </div>
+    `);
+  } catch (err) {
+    console.error('OAuth Callback Error:', err);
+    res.status(500).send('Internal Server Error during Slack Authentication');
   }
 });
 

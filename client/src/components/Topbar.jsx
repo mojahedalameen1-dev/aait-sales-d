@@ -1,56 +1,76 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, AlertCircle, Calendar, CheckCircle2, Menu, PlusCircle } from 'lucide-react';
+import { Bell, AlertCircle, Calendar, CheckCircle2, Menu, PlusCircle, Hash, MessageSquare } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../hooks/useSocket';
 import { formatDate } from '../utils/formatDate';
 import { API_URL } from '../utils/apiConfig';
+import playChime from '../utils/audioNotification';
 
 export default function Topbar({ isMobile, setIsMobileOpen }) {
   const { isDark } = useTheme();
   const { apiFetch, user, isAdmin } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dueTodayDeals, setDueTodayDeals] = useState([]);
+  const [slackUnread, setSlackUnread] = useState(0);
 
   const textPrimary = isDark ? '#F0F4FF' : '#0A0F1E';
-  const textSecondary = isDark ? '#8B9CC8' : '#4A5570';
-  const textMuted = isDark ? '#4A5A82' : '#94A3B8';
-  const border = isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0';
+  
+  const fetchCounts = useCallback(async () => {
+    if (!user || isAdmin) return;
+    try {
+      // 1. Fetch Followups
+      const clientRes = await apiFetch(API_URL('/api/clients'));
+      if (clientRes.ok) {
+        const data = await clientRes.json();
+        const today = new Date().toISOString().split('T')[0];
+        const dueToday = data.filter(client => {
+          if (!client.next_action_date) return false;
+          const nextAction = new Date(client.next_action_date).toISOString().split('T')[0];
+          return nextAction === today;
+        });
+        setDueTodayDeals(dueToday);
+      }
+
+      // 2. Fetch Slack Mentions
+      const slackRes = await apiFetch(API_URL('/api/slack/mentions/stats'));
+      if (slackRes.ok) {
+        const stats = await slackRes.json();
+        setSlackUnread(stats.summary.unread || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching Topbar data:', err);
+    }
+  }, [user, isAdmin, apiFetch]);
 
   useEffect(() => {
-    const fetchTodayFollowups = async () => {
-      if (!user || isAdmin) return;
-      try {
-        const res = await apiFetch(API_URL('/api/clients'));
-        if (res.ok) {
-          const contentType = res.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const data = await res.json();
-            const today = new Date().toISOString().split('T')[0];
+    fetchCounts();
+    const intervalId = setInterval(fetchCounts, 60000);
+    return () => clearInterval(intervalId);
+  }, [fetchCounts]);
 
-            const dueToday = data.filter(client => {
-              if (!client.next_action_date) return false;
-              // Check if it's strictly due today (or overdue compared to current local time, but mostly matching today's date)
-              const nextAction = new Date(client.next_action_date).toISOString().split('T')[0];
-              return nextAction === today;
-            });
-
-            setDueTodayDeals(dueToday);
-          } else {
-             console.warn('Topbar expected JSON from /api/clients, received:', contentType);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching today followups for topbar:', err);
-      }
+  useEffect(() => {
+    if (!socket || !user) return;
+    
+    const handleNewMention = () => {
+      setSlackUnread(prev => prev + 1);
+      playChime('mention'); // Added premium sound feedback
     };
 
-    fetchTodayFollowups();
-    const intervalId = setInterval(fetchTodayFollowups, 60000); // 1 min update
-    return () => clearInterval(intervalId);
-  }, [user, isAdmin]);
+    socket.on('new_mention', handleNewMention);
+    socket.on('mentions_synced', fetchCounts);
+    
+    return () => {
+      socket.off('new_mention', handleNewMention);
+      socket.off('mentions_synced', fetchCounts);
+    };
+  }, [socket, user, fetchCounts]);
+
+  const totalNotifications = dueTodayDeals.length + slackUnread;
 
   return (
     <div className="h-16 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-[#0F1629]/80 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300 shadow-sm">
@@ -61,18 +81,16 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
             style={{
               width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'transparent', border: 'none', color: textPrimary, cursor: 'pointer',
-              marginRight: '-8px' // Align nicely with edge
+              marginRight: '-8px'
             }}
             aria-label="فتح القائمة الجانبية"
           >
             <Menu size={24} />
           </button>
         )}
-        {/* Could place breadcrumbs or page title here if needed */}
       </div>
 
       <div className="flex items-center gap-4 relative">
-        {/* Quick Deal Button - Only for Developers */}
         {!isAdmin && (
           <button
             onClick={() => navigate('/clients/new')}
@@ -83,7 +101,6 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
           </button>
         )}
 
-        {/* Notifications - Only for Developers */}
         {!isAdmin && (
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -91,9 +108,9 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
             aria-label="عرض الإشعارات"
           >
             <Bell size={20} />
-            {dueTodayDeals.length > 0 && (
+            {totalNotifications > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-[#0F1629]">
-                {dueTodayDeals.length}
+                {totalNotifications}
               </span>
             )}
           </button>
@@ -106,38 +123,48 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              style={{
-                top: '52px',
-                left: 0,
-                width: isMobile ? 'calc(100vw - 48px)' : '320px',
-              }}
-              className="absolute max-w-[320px] bg-white dark:bg-[#19243E] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-200 dark:border-white/5 overflow-hidden z-[100]"
+              className="absolute top-[52px] left-0 w-[320px] bg-white dark:bg-[#19243E] rounded-2xl shadow-2xl border border-slate-200 dark:border-white/5 overflow-hidden z-[100]"
             >
               <div className="p-4 border-b border-slate-200 dark:border-white/5 flex justify-between items-center">
-                <h4 className="font-['IBM_Plex_Sans_Arabic'] text-[15px] font-extrabold text-slate-900 dark:text-slate-100 m-0">الإشعارات والمتابعات</h4>
-                <div className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full text-xs font-bold">
-                  {dueTodayDeals.length} اليوم
+                <h4 className="font-['IBM_Plex_Sans_Arabic'] text-[15px] font-extrabold text-slate-900 dark:text-slate-100 m-0">مركز التنبيهات</h4>
+                <div className="bg-purple-500/10 text-purple-500 px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
+                  {totalNotifications} جديد
                 </div>
               </div>
 
-              <div className="max-h-[350px] overflow-y-auto p-2 custom-scrollbar">
-                {dueTodayDeals.length === 0 ? (
-                  <div className="py-8 px-4 text-center text-slate-500 dark:text-slate-400">
-                    <div className="bg-slate-50 border border-slate-100 dark:bg-white/5 dark:border-white/5 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
-                      <CheckCircle2 size={24} className="text-emerald-500" />
+              <div className="max-h-[400px] overflow-y-auto p-2 custom-scrollbar space-y-1">
+                {/* Slack Notifications Section */}
+                {slackUnread > 0 && (
+                  <div
+                    onClick={() => { 
+                      navigate('/slack-mentions'); 
+                      setIsDropdownOpen(false);
+                      setSlackUnread(0); // Clear local count on navigation
+                    }}
+                    className="p-3 rounded-xl cursor-pointer flex gap-3 items-start transition-all bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/10 mb-2 group"
+                  >
+                    <div className="bg-purple-500 text-white p-2 rounded-full shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform">
+                      <MessageSquare size={16} />
                     </div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">لا توجد متابعات اليوم</p>
-                    <p className="text-xs m-0">أنت تسير بشكل ممتاز!</p>
+                    <div>
+                      <div className="text-sm font-black text-purple-600 dark:text-purple-400 mb-0.5">منشنات Slack جديدة</div>
+                      <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight">لديك {slackUnread} منشن جديد ينتظر ردك في Slack</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Due Today Section */}
+                {dueTodayDeals.length === 0 && slackUnread === 0 ? (
+                  <div className="py-12 px-4 text-center">
+                    <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm font-bold text-slate-400">لا توجد تنبيهات جديدة</p>
                   </div>
                 ) : (
                   dueTodayDeals.map(deal => (
                     <div
                       key={deal.id}
-                      onClick={() => {
-                        navigate('/pipeline');
-                        setIsDropdownOpen(false);
-                      }}
-                      className="p-3 rounded-xl cursor-pointer flex gap-3 items-start transition-colors duration-200 hover:bg-slate-50 dark:hover:bg-white/5 mb-1 group"
+                      onClick={() => { navigate('/pipeline'); setIsDropdownOpen(false); }}
+                      className="p-3 rounded-xl cursor-pointer flex gap-3 items-start transition-colors duration-200 hover:bg-slate-50 dark:hover:bg-white/5 group border border-transparent hover:border-slate-200 dark:hover:border-white/5"
                     >
                       <div className="bg-red-500/10 text-red-500 p-2 rounded-full shrink-0 group-hover:bg-red-500/20 transition-colors">
                         <AlertCircle size={16} />
@@ -145,7 +172,7 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
                       <div>
                         <div className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-0.5">{deal.client_name}</div>
                         <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">يجب متابعة العميل اليوم!</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-500 flex items-center gap-1">
+                        <div className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
                           <Calendar size={10} /> {formatDate(deal.next_action_date)}
                         </div>
                       </div>
@@ -154,21 +181,18 @@ export default function Topbar({ isMobile, setIsMobileOpen }) {
                 )}
               </div>
 
-              {dueTodayDeals.length > 0 && (
-                <div className="p-3 border-t border-slate-200 dark:border-white/5 text-center">
-                  <button
-                    onClick={() => { navigate('/pipeline'); setIsDropdownOpen(false); }}
-                    className="bg-transparent border-none text-blue-500 hover:text-blue-600 dark:text-[#4F8EF7] dark:hover:text-[#7C3AED] text-[13px] font-bold cursor-pointer transition-colors"
-                  >
-                    عرض كل الصفقات في بورد التقفيل &larr;
-                  </button>
-                </div>
-              )}
+              <div className="p-3 border-t border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                <button
+                  onClick={() => { navigate('/pipeline'); setIsDropdownOpen(false); }}
+                  className="w-full py-2 text-blue-500 hover:text-blue-600 dark:text-[#4F8EF7] dark:hover:text-purple-400 text-xs font-black transition-colors"
+                >
+                  عرض كافة الصفقات والمتابعات &larr;
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
     </div>
   );
 }

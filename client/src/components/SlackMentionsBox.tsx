@@ -89,7 +89,7 @@ export default function SlackMentionsBox() {
   useEffect(() => {
     fetchMentions();
     syncMentions(true);
-    intervalRef.current = setInterval(() => syncMentions(true), 30000);
+    intervalRef.current = setInterval(() => syncMentions(true), 12000); // More frequent updates
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchMentions, syncMentions]);
 

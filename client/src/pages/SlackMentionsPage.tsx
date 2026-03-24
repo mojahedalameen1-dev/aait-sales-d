@@ -251,7 +251,7 @@ export default function SlackMentionsPage() {
     fetchMentions(activeFilter);
     fetchStats();
     handleSync(true);
-    syncIntervalRef.current = setInterval(() => handleSync(true), 60000);
+    syncIntervalRef.current = setInterval(() => handleSync(true), 10000); // 10s for better real-time feel
     return () => { if (syncIntervalRef.current) clearInterval(syncIntervalRef.current); };
   }, [activeFilter, fetchMentions, fetchStats, handleSync]);
 

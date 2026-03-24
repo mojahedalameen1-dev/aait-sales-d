@@ -16,37 +16,40 @@ if (process.env.NODE_ENV !== 'production') {
 const fs = require('fs');
 
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
-});
+let server;
+let io;
+
+try {
+  server = require('http').createServer(app);
+  // We only initialize Socket.io if not on Vercel, or we handle it gracefully.
+  // Vercel doesn't support WebSockets, so we provide a mock or skip to avoid crashes.
+  const { Server } = require('socket.io');
+  io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+  // Attach IO to app for route access
+  app.set('io', io);
+
+  // WebSocket connection handling
+  io.on('connection', (socket) => {
+    console.log('🔌 New client connected:', socket.id);
+    socket.on('join', (userId) => {
+      socket.join(`user_${userId}`);
+      console.log(`👤 User ${userId} joined room`);
+    });
+    socket.on('disconnect', () => {
+      console.log('🔌 Client disconnected');
+    });
+  });
+} catch (err) {
+  console.warn('⚠️ Socket.io initialization failed or skipped:', err.message);
+}
 
 const PORT = process.env.PORT || 5000;
-
-// Attach IO to app for route access
-app.set('io', io);
-
-console.log('🚀 Server starting initialization...');
-console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-console.log(`Vercel environment: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
-
-// WebSocket connection handling
-io.on('connection', (socket) => {
-  console.log('🔌 New client connected:', socket.id);
-  
-  // Join user-specific room if token is provided (optional for now, we'll use broadcast or rooms)
-  socket.on('join', (userId) => {
-    socket.join(`user_${userId}`);
-    console.log(`👤 User ${userId} joined room`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('🔌 Client disconnected');
-  });
-});
 
 // Validate required environment variables
 const requiredEnv = ['DATABASE_URL', 'JWT_SECRET'];

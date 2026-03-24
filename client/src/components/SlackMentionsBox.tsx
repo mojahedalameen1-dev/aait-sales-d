@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Clock, ExternalLink, Hash, Zap, CheckCircle2, Radio, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Bell, Clock, Hash, Zap, CheckCircle2, Radio, RefreshCw, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../hooks/useSocket';
 import { API_URL } from '../utils/apiConfig';
@@ -15,29 +15,45 @@ interface SlackMention {
   is_read: boolean;
 }
 
-const CHANNEL_COLORS: Record<string, string> = {
-  C09152K160H: 'from-blue-500 to-cyan-500',
-  C0911HRQDC6: 'from-emerald-500 to-teal-500',
-  C091X5UE6HE: 'from-orange-500 to-amber-500',
-  C09MUFV7GCB: 'from-pink-500 to-rose-500',
-  C090S0EM43H: 'from-violet-500 to-purple-500',
-  C0910PDMU30: 'from-indigo-500 to-blue-500',
+const CHANNEL_NAMES: Record<string, string> = {
+  C0910PDMU30: 'sales-team-followup',
+  C0911HRQDC6: 'project-managers',
+  C091X5UE6HE: 'sales-dev-sync',
 };
 
-function parseText(text: string): string {
-  return text
+const CHANNEL_COLORS: Record<string, string> = {
+  C0910PDMU30: 'from-indigo-500 to-blue-500',
+  C0911HRQDC6: 'from-emerald-500 to-teal-500',
+  C091X5UE6HE: 'from-orange-500 to-amber-500',
+  C09152K160H: 'from-blue-500 to-cyan-500',
+  C09MUFV7GCB: 'from-pink-500 to-rose-500',
+  C090S0EM43H: 'from-violet-500 to-purple-500',
+};
+
+function parseText(text: string) {
+  // Special handling for e.aait.sa links
+  const ticketRegex = /<(https:\/\/e\.aait\.sa\/[^|>]+)(\|[^>]+)?>/g;
+  let parsed = text.replace(ticketRegex, '<a href="$1" target="_blank" class="text-purple-400 hover:underline font-bold">رابط التكت</a>');
+  
+  // Standard Slack link cleanup
+  parsed = parsed
     .replace(/<@U[A-Z0-9]+>/g, '@مذكور')
     .replace(/<https?:\/\/[^|>]+\|([^>]+)>/g, '$1')
     .replace(/<https?:\/\/[^>]+>/g, 'رابط')
     .replace(/\*([^*]+)\*/g, '$1');
+
+  return parsed;
 }
 
-function relativeTime(dateStr: string): string {
-  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-  if (diff < 60) return 'الآن';
-  if (diff < 3600) return `${Math.floor(diff / 60)}د`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}س`;
-  return `${Math.floor(diff / 86400)}ي`;
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleString('ar-EG', { 
+    day: 'numeric', 
+    month: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true 
+  }).replace('،', ' -');
 }
 
 export default function SlackMentionsBox() {
@@ -100,10 +116,10 @@ export default function SlackMentionsBox() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] backdrop-blur-sm group/box hover:border-white/12 transition-all">
+    <div className="flex flex-col h-full overflow-hidden rounded-2xl bg-white/[0.02] backdrop-blur-sm group/box transition-all">
 
       {/* Header */}
-      <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
@@ -120,7 +136,7 @@ export default function SlackMentionsBox() {
           </div>
           <div>
             <h3 className="text-sm font-black text-white leading-none">تنبيهات Slack</h3>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-1.5 mt-1">
               <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-red-500'}`} />
               <span className="text-[10px] text-slate-500">{connected ? 'مباشر' : 'غير متصل'}</span>
             </div>
@@ -151,7 +167,8 @@ export default function SlackMentionsBox() {
           ) : mentions.length > 0 ? (
             <div className="p-2 space-y-1">
               {mentions.map((mention, idx) => {
-                const color = CHANNEL_COLORS[mention.channel_id] || 'from-purple-500 to-indigo-500';
+                const color = CHANNEL_COLORS[mention.channel_id] || 'from-slate-500 to-slate-600';
+                const name = CHANNEL_NAMES[mention.channel_id] || mention.channel_id;
                 return (
                   <motion.div
                     key={mention.id}
@@ -160,7 +177,7 @@ export default function SlackMentionsBox() {
                     className={`relative group/item flex items-start gap-3 px-3 py-3 rounded-xl transition-all cursor-default ${
                       mention.is_read
                         ? 'hover:bg-white/[0.03]'
-                        : 'bg-purple-500/[0.06] hover:bg-purple-500/[0.09] border border-purple-500/15'
+                        : 'bg-white/[0.04] hover:bg-white/[0.06]'
                     }`}
                   >
                     {/* Unread dot */}
@@ -177,16 +194,17 @@ export default function SlackMentionsBox() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-0.5">
                         <span className="text-[10px] font-black text-slate-400 truncate">
-                          #{mention.channel_id.slice(-8)}
+                          {name}
                         </span>
                         <span className="flex items-center gap-0.5 text-[9px] text-slate-600 flex-shrink-0 ml-1">
                           <Clock size={8} />
-                          {relativeTime(mention.created_at)}
+                          {formatDate(mention.created_at)}
                         </span>
                       </div>
-                      <p className={`text-[12px] leading-snug line-clamp-2 ${mention.is_read ? 'text-slate-500' : 'text-slate-200 font-medium'}`}>
-                        {parseText(mention.text)}
-                      </p>
+                      <p 
+                        className={`text-[12px] leading-snug line-clamp-2 ${mention.is_read ? 'text-slate-500' : 'text-slate-200 font-medium'}`}
+                        dangerouslySetInnerHTML={{ __html: parseText(mention.text) }}
+                      />
                     </div>
 
                     {/* Mark as read button */}

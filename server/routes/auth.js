@@ -97,7 +97,35 @@ router.post('/login', async (req, res) => {
 
 // Get current user
 router.get('/me', authenticateJWT, async (req, res) => {
-  res.json({ user: req.user });
+  try {
+    const userId = req.user.id;
+    
+    // System Admin (Environment Admin) check
+    if (userId === 0) {
+      return res.json({ user: req.user });
+    }
+
+    const result = await db.query('SELECT id, username, full_name, is_admin, is_primary_admin, is_active, profile_image_url FROM users WHERE id = $1', [userId]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        isAdmin: user.is_admin,
+        isPrimaryAdmin: user.is_primary_admin,
+        fullName: user.full_name,
+        profileImageUrl: user.profile_image_url
+      }
+    });
+  } catch (err) {
+    console.error('Get /me error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Update profile

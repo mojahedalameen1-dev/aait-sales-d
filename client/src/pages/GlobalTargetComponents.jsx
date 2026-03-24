@@ -304,68 +304,111 @@ export function PerformanceProgressChart({ data, target, isDark }) {
                 </div>
             </div>
 
-            <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
+            <div className="relative group/chart" onMouseLeave={() => setHoverIdx(null)}>
                 <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
                     {/* Grid */}
                     <line x1={PL} y1={H - P} x2={W - P} y2={H - P} stroke="var(--border-color)" opacity="0.5" strokeWidth="1" />
                     {[0.25, 0.5, 0.75, 1].map(p => (
                         <g key={p}>
-                            <line x1={PL} y1={getY(maxVal * p)} x2={W - P} y2={getY(maxVal * p)} stroke="var(--border-color)" opacity="0.2" strokeDasharray="4 4" />
-                            <text x={PL - 15} y={getY(maxVal * p)} textAnchor="end" alignmentBaseline="middle" fontSize="10" fontWeight="900" fill="var(--text-muted)">{fmt(maxVal * p)}</text>
+                            <line x1={PL} y1={getY(maxVal * p)} x2={W - P} y2={getY(maxVal * p)} stroke="var(--border-color)" opacity="0.1" strokeDasharray="4 4" />
+                            <text x={PL - 10} y={getY(maxVal * p)} textAnchor="end" alignmentBaseline="middle" fontSize="10" fontWeight="900" fill="var(--text-muted)">{fmt(maxVal * p)}</text>
                         </g>
                     ))}
 
                     {/* Target Line */}
-                    <line x1={PL} y1={getY(target)} x2={W - P} y2={getY(target)} stroke={C.warning} strokeWidth="2" strokeDasharray="6 4" opacity="0.6" />
-                    <text x={W - P + 10} y={getY(target)} alignmentBaseline="middle" fontSize="11" fontWeight="900" fill={C.warning}>Target {fmt(target)}</text>
+                    <line x1={PL} y1={getY(target)} x2={W - P} y2={getY(target)} stroke={C.warning} strokeWidth="2" strokeDasharray="6 4" opacity="0.4" />
+                    <text x={W - P + 5} y={getY(target)} alignmentBaseline="middle" fontSize="10" fontWeight="900" fill={C.warning}>Target {fmt(target)}</text>
 
                     {/* Paths */}
                     {datasets.map((d, i) => {
                         const isLast = i === datasets.length - 1;
+                        if (d.points.length === 0) return null;
                         const path = `M ${getX(1)} ${getY(0)} L ` + d.points.map((v, day) => `${getX(day + 1)},${getY(v)}`).join(' ');
                         return (
                             <motion.path
                                 key={d.gid}
                                 d={path}
                                 fill="none"
-                                stroke={isLast ? '#3B82F6' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)')}
+                                stroke={isLast ? '#3B82F6' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)')}
                                 strokeWidth={isLast ? 4 : 2}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 initial={{ pathLength: 0 }}
                                 animate={{ pathLength: 1 }}
                                 transition={{ duration: 1.5, delay: i * 0.1 }}
+                                style={{
+                                    filter: isLast ? 'drop-shadow(0 0 8px rgba(59,130,246,0.3))' : 'none'
+                                }}
                             />
                         );
                     })}
 
-                    {/* Hover Area */}
-                    {new Array(31).fill(0).map((_, i) => (
-                        <rect key={i} x={getX(i+1) - 10} y={P} width={20} height={H-2*P} fill="transparent" style={{ cursor: 'crosshair' }} onMouseEnter={() => setHoverIdx(i)} />
-                    ))}
-
+                    {/* Interactive Indicator Line */}
                     {hoverIdx !== null && (
-                        <line x1={getX(hoverIdx + 1)} y1={P} x2={getX(hoverIdx + 1)} y2={H - P} stroke="#3B82F6" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
+                        <g>
+                            <line 
+                                x1={getX(hoverIdx + 1)} y1={P} 
+                                x2={getX(hoverIdx + 1)} y2={H - P} 
+                                stroke="#3B82F6" strokeWidth="2" 
+                                strokeDasharray="none"
+                                style={{ filter: 'drop-shadow(0 0 4px rgba(59,130,246,0.8))' }}
+                            />
+                            <circle 
+                                cx={getX(hoverIdx + 1)} 
+                                cy={getY(datasets[datasets.length-1].points[hoverIdx])} 
+                                r="6" fill="#3B82F6" 
+                                stroke="white" strokeWidth="2" 
+                                style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.5))' }}
+                            />
+                        </g>
                     )}
+
+                    {/* Hover Area Segments */}
+                    {new Array(31).fill(0).map((_, i) => (
+                        <rect 
+                            key={i} 
+                            x={getX(i+1) - 10} y={0} 
+                            width={20} height={H} 
+                            fill="transparent" 
+                            style={{ cursor: 'crosshair' }} 
+                            onMouseEnter={() => setHoverIdx(i)} 
+                        />
+                    ))}
                 </svg>
 
                 {hoverIdx !== null && (
-                    <div className="absolute top-0 pointer-events-none bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-2xl backdrop-blur-md z-10 min-w-[180px]" 
+                    <div className="absolute top-[-20px] pointer-events-none bg-white/90 dark:bg-slate-900/90 p-5 rounded-2xl shadow-2xl backdrop-blur-xl z-10 min-w-[200px] border border-slate-100 dark:border-white/10" 
                          style={{ 
                              left: hoverIdx > 15 ? 'auto' : `${(getX(hoverIdx + 1) / W) * 100}%`,
-                             right: hoverIdx > 15 ? `${100 - (getX(hoverIdx + 1) / W) * 100}%` : 'auto'
+                             right: hoverIdx > 15 ? `${100 - (getX(hoverIdx + 1) / W) * 100}%` : 'auto',
+                             transform: 'translateY(-50%)',
+                             margin: '0 15px'
                          }}>
-                        <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 dark:border-white/5 pb-2">يوم {hoverIdx + 1} للشهر</div>
-                        {datasets.map((d, i) => (
-                            <div key={i} className={`flex justify-between items-center py-1.5 ${i === datasets.length - 1 ? 'mt-2 pt-2' : ''}`}>
-                                <span className={`text-[11px] font-black ${i === datasets.length - 1 ? 'text-blue-500' : 'text-slate-500'}`}>
-                                    {i === datasets.length - 1 ? 'الحالي' : 'تاريخي'}
-                                </span>
-                                <span className={`text-sm font-black ${i === datasets.length - 1 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                                    {fmtSAR(d.points[hoverIdx])}
-                                </span>
-                            </div>
-                        ))}
+                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-white/5">
+                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">تتبع المسار</span>
+                            <span className="text-[10px] font-black text-slate-400">يوم {hoverIdx + 1} للشهر</span>
+                        </div>
+                        
+                        {datasets.map((d, i) => {
+                            const isCurrent = i === datasets.length - 1;
+                            return (
+                                <div key={i} className={`flex justify-between items-end gap-4 ${isCurrent ? 'mt-3 pt-3 border-t border-slate-100 dark:border-white/5' : 'mb-2 opacity-60'}`}>
+                                    <div className="flex flex-col">
+                                        <span className={`text-[9px] font-black uppercase tracking-tighter ${isCurrent ? 'text-blue-500' : 'text-slate-400'}`}>
+                                            {isCurrent ? 'الإجمالي الحالي' : 'الأداء التاريخي'}
+                                        </span>
+                                        <span className={`text-sm font-black transition-all ${isCurrent ? 'text-slate-900 dark:text-white text-lg scale-110 origin-left' : 'text-slate-500'}`}>
+                                            {fmtSAR(d.points[hoverIdx])}
+                                        </span>
+                                    </div>
+                                    {isCurrent && (
+                                        <div className="bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full text-[9px] font-black">
+                                            {fmtPct(d.points[hoverIdx] / target)}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

@@ -71,6 +71,22 @@ export default function GlobalTarget() {
 
     /* ── FETCHING LOGIC ── */
     const fetchSheet = useCallback(async (gid, isBackground = false) => {
+        const cacheKey = `sheet_data_${gid}`;
+        const cached = sessionStorage.getItem(cacheKey);
+
+        if (cached && !isBackground) {
+            try {
+                const data = JSON.parse(cached);
+                setHistoricData(prev => ({ ...prev, [gid]: data }));
+                if (gid === activeGid) setAllData(data);
+                setLoading(false);
+                return data;
+            } catch (e) {
+                console.error("Cache error", e);
+                sessionStorage.removeItem(cacheKey);
+            }
+        }
+
         if (!isBackground) { setRefreshing(true); setError(null); }
         try {
             const url = `https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vThOI_pq9C9-AVOqH7vVkNhoe834Op3bMkUnvmF1A7w7AYcy_COHveU-do-wbECug/pubhtml/sheet?pli=1&headers=false&gid=${gid}`;
@@ -97,14 +113,11 @@ export default function GlobalTarget() {
             }
             if (headerIdx === -1) throw new Error('لم يتم العثور على هيكل الجدول الصحيح');
 
-            // Dynamic detection of keys
             const prioKey = (keys, prioritizedNeedles) => {
-                // First pass: look for exact matches
                 for (const needle of prioritizedNeedles) {
                     const exact = keys.find(k => k.trim() === needle);
                     if (exact) return exact;
                 }
-                // Second pass: look for partial matches in order of priority
                 for (const needle of prioritizedNeedles) {
                     const partial = keys.find(k => k.includes(needle));
                     if (partial) return partial;
@@ -112,27 +125,15 @@ export default function GlobalTarget() {
                 return null;
             };
 
-            let excludedCount = 0;
             const parsedRows = [];
             for (let i = headerIdx + 1; i < rows.length; i++) {
                 const cells = Array.from(rows[i].querySelectorAll('td')).map(getCellText);
-
-                // Exclude mostly empty rows (> 70% empty)
                 const emptyCellsCount = cells.filter(c => !c).length;
-                if (emptyCellsCount / cells.length > 0.7) {
-                    excludedCount++;
-                    continue;
-                }
+                if (emptyCellsCount / cells.length > 0.7) continue;
 
-                // Check Column M
                 const colMIndex = headers.findIndex(h => h.trim() === 'م');
                 const valM = colMIndex !== -1 ? cells[colMIndex]?.trim() : '';
-                
-                // Valid M column must be a number (protects against totals and empty rows)
-                if (!valM || !/^\d+$/.test(valM)) {
-                    excludedCount++;
-                    continue;
-                }
+                if (!valM || !/^\d+$/.test(valM)) continue;
 
                 const row = {};
                 headers.forEach((h, idx) => { if (h) row[h] = cells[idx] || ''; });
@@ -141,19 +142,13 @@ export default function GlobalTarget() {
                 const nameKey = prioKey(keys, ['اسم العميل حسب العقد', 'اسم العميل']);
                 const name = row[nameKey]?.trim() || '';
 
-                if (!name || /(^|\s)(المجموع|الإجمالي|اجمالي|مجموع|total)(\s|$)/i.test(name)) {
-                    excludedCount++;
-                    continue;
-                }
+                if (!name || /(^|\s)(المجموع|الإجمالي|اجمالي|مجموع|total)(\s|$)/i.test(name)) continue;
 
                 const amountKey = prioKey(keys, ['المبلغ', 'الدفع الاولى']);
                 const netAmountKey = prioKey(keys, ['صافي المبلغ', 'صافي']);
-
                 const grossAmount = parseFloat((row[amountKey] || '0').replace(/[^\d.-]/g, '')) || 0;
                 let netAmount = parseFloat((row[netAmountKey] || '0').replace(/[^\d.-]/g, '')) || 0;
-                if (!netAmount && grossAmount) {
-                    netAmount = grossAmount / 1.15;
-                }
+                if (!netAmount && grossAmount) netAmount = grossAmount / 1.15;
 
                 if (grossAmount === 0 && netAmount === 0) continue;
 
@@ -172,22 +167,13 @@ export default function GlobalTarget() {
                 });
             }
 
-            // Exclude outliers (> 3 * average amount)
-            let finalRows = parsedRows;
-            /*
-            if (parsedRows.length > 0) {
-                const totalAmt = parsedRows.reduce((sum, r) => sum + r.__amount, 0);
-                const avgAmt = totalAmt / parsedRows.length;
-                const outlierLimit = avgAmt * 3;
-                finalRows = parsedRows.filter(r => r.__amount <= outlierLimit);
+            sessionStorage.setItem(cacheKey, JSON.stringify(parsedRows));
+            setHistoricData(prev => ({ ...prev, [gid]: parsedRows }));
+            if (gid === activeGid) {
+                setAllData(parsedRows);
+                addToast('success', `تم تحميل ${parsedRows.length} عقد بنجاح`);
             }
-            */
-
-            if (!isBackground) {
-                setAllData(finalRows);
-                addToast('success', `تم تحميل ${finalRows.length} عقد بنجاح`);
-            }
-            return finalRows;
+            return parsedRows;
         } catch (e) {
             console.error(e);
             if (!isBackground) { setError(e.message); setAllData([]); addToast('error', 'تعذّر تحميل البيانات'); }
@@ -195,7 +181,7 @@ export default function GlobalTarget() {
         } finally {
             if (!isBackground) { setLoading(false); setRefreshing(false); }
         }
-    }, [addToast]);
+    }, [activeGid, addToast]);
 
     // Discovery + Initial load
     useEffect(() => {
@@ -239,15 +225,14 @@ export default function GlobalTarget() {
         setLoading(true);
         setSearch(''); setFilterSales(''); setFilterSource(''); setFilterType(''); setFilterDate(null); setPage(1);
 
-        fetchSheet(activeGid).then(data => {
-            setHistoricData(prev => ({ ...prev, [activeGid]: data }));
+        // Fetch active month first, and pre-fetch others in parallel
+        const activePromise = fetchSheet(activeGid);
+        const otherPromises = sheets
+            .filter(s => s.gid !== activeGid && !historicData[s.gid])
+            .map(s => fetchSheet(s.gid, true));
 
-            // Prefetch others for MoM
-            sheets.forEach(s => {
-                if (s.gid !== activeGid && !historicData[s.gid]) {
-                    fetchSheet(s.gid, true).then(d => setHistoricData(prev => ({ ...prev, [s.gid]: d })));
-                }
-            });
+        Promise.all([activePromise, ...otherPromises]).finally(() => {
+            setLoading(false);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeGid, sheets]);

@@ -11,6 +11,7 @@ import ActionCenter from './bd/ActionCenter';
 import RecentSales from './bd/RecentSales';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { API_URL } from '../utils/apiConfig';
+import SlackMentionsBox from '../components/SlackMentionsBox';
 
 export default function BusinessDeveloperDashboard() {
     const { user, apiFetch } = useAuth();
@@ -76,12 +77,19 @@ export default function BusinessDeveloperDashboard() {
                 bestMonthGap={Math.max(0, (excelStats.bestMonth?.actual || 0) - (excelStats.currentMonth?.actual || 0))}
             />
 
-            {/* 5. مركز العمل (المتابعات والفرص المتاحة) */}
-            <ActionCenter 
-                followups={neonStats.todayFollowups || []}
-                topDeals={neonStats.topDeals || []}
-                stats={excelStats}
-            />
+            {/* Slack Mentions Inbox for Business Developers */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                    <ActionCenter 
+                        followups={neonStats.todayFollowups || []}
+                        topDeals={neonStats.topDeals || []}
+                        stats={excelStats}
+                    />
+                </div>
+                <div className="lg:col-span-1">
+                    <SlackMentionsBox />
+                </div>
+            </div>
 
             {/* 6. تحليل الأداء الذكي */}
             <IntelligenceEngine 

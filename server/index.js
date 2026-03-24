@@ -33,7 +33,13 @@ if (missingEnv.length > 0) {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith('/api/slack')) {
+      req.rawBody = buf.toString();
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files
@@ -61,6 +67,7 @@ app.use('/api/meeting-preps', require('./routes/meetingPreps'));
 app.use('/api/analyze-prep', require('./routes/analyzePrep'));
 app.use('/api/proposals', require('./routes/proposals'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/slack', require('./routes/slack'));
 
 // Health-Check Endpoint (Self-Diagnostic System)
 app.get('/api/health', (req, res) => {

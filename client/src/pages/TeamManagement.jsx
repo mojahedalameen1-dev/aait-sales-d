@@ -10,7 +10,9 @@ const TeamManagement = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-    const [newUser, setNewUser] = useState({ fullName: '', username: '', password: '', role: 'developer' });
+    const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+    const [newUser, setNewUser] = useState({ fullName: '', username: '', password: '', role: 'developer', slackUserId: '' });
+    const [editingUser, setEditingUser] = useState(null);
     const [formError, setFormError] = useState('');
     const navigate = useNavigate();
 
@@ -52,7 +54,28 @@ const TeamManagement = () => {
             
             setUsers([data.user, ...users]);
             setIsAddUserOpen(false);
-            setNewUser({ fullName: '', username: '', password: '', role: 'developer' });
+            setNewUser({ fullName: '', username: '', password: '', role: 'developer', slackUserId: '' });
+        } catch (err) {
+            setFormError(err.message);
+        }
+    };
+
+    const handleEditUser = async (e) => {
+        e.preventDefault();
+        setFormError('');
+        try {
+            const res = await apiFetch(API_URL(`/api/admin/developers/${editingUser.id}`), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingUser)
+            });
+            
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            
+            setUsers(users.map(u => u.id === editingUser.id ? data.user : u));
+            setIsEditUserOpen(false);
+            setEditingUser(null);
         } catch (err) {
             setFormError(err.message);
         }
@@ -109,6 +132,7 @@ const TeamManagement = () => {
                         <thead>
                             <tr className="bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-gray-400 text-xs uppercase tracking-[0.1em] font-black">
                                 <th className="px-8 py-5">المستخدم</th>
+                                <th className="px-8 py-5 text-center">Slack ID</th>
                                 <th className="px-8 py-5 text-center">الدور الموظيفي</th>
                                 <th className="px-8 py-5 text-center">الإجراءات والتحكم</th>
                             </tr>
@@ -128,6 +152,11 @@ const TeamManagement = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-center">
+                                        <span className={`font-mono text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ${!user.slack_user_id ? 'opacity-30' : ''}`}>
+                                            {user.slack_user_id || '---'}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5 text-center">
                                         <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase ${
                                             user.role === 'admin' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                         }`}>
@@ -136,6 +165,22 @@ const TeamManagement = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingUser({
+                                                        id: user.id,
+                                                        fullName: user.fullName,
+                                                        username: user.username,
+                                                        role: user.role,
+                                                        slackUserId: user.slack_user_id || ''
+                                                    });
+                                                    setIsEditUserOpen(true);
+                                                }}
+                                                className="p-2 hover:bg-white/10 rounded-lg text-amber-500 transition-colors"
+                                                title="تعديل المستخدم"
+                                            >
+                                                <EditIcon />
+                                            </button>
                                             <button 
                                                 onClick={() => navigate(`/admin/developer/${user.id}`)}
                                                 className="p-2 hover:bg-white/10 rounded-lg text-blue-400 transition-colors"
@@ -171,15 +216,19 @@ const TeamManagement = () => {
                 </div>
             </div>
 
-            {/* Add User Modal */}
+            {/* Add/Edit User Modal */}
             <AnimatePresence>
-                {isAddUserOpen && (
+                {(isAddUserOpen || isEditUserOpen) && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsAddUserOpen(false)}
+                            onClick={() => {
+                                setIsAddUserOpen(false);
+                                setIsEditUserOpen(false);
+                                setEditingUser(null);
+                            }}
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         />
                         <motion.div 
@@ -188,8 +237,10 @@ const TeamManagement = () => {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="w-full max-w-md glass-card p-6 relative z-10"
                         >
-                            <h3 className="text-xl font-bold text-white mb-6">إضافة عضو جديد للفريق</h3>
-                            <form onSubmit={handleCreateUser} className="space-y-4">
+                            <h3 className="text-xl font-bold text-white mb-6">
+                                {isEditUserOpen ? 'تعديل بيانات العضو' : 'إضافة عضو جديد للفريق'}
+                            </h3>
+                            <form onSubmit={isEditUserOpen ? handleEditUser : handleCreateUser} className="space-y-4">
                                 {formError && (
                                     <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm text-center">
                                         {formError}
@@ -201,8 +252,8 @@ const TeamManagement = () => {
                                         id="fullName"
                                         name="fullName"
                                         type="text"
-                                        value={newUser.fullName}
-                                        onChange={(e) => setNewUser({...newUser, fullName: e.target.value})}
+                                        value={isEditUserOpen ? editingUser?.fullName : newUser.fullName}
+                                        onChange={(e) => isEditUserOpen ? setEditingUser({...editingUser, fullName: e.target.value}) : setNewUser({...newUser, fullName: e.target.value})}
                                         className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none"
                                         placeholder="الاسم الثلاثي"
                                         required
@@ -214,33 +265,48 @@ const TeamManagement = () => {
                                         id="username"
                                         name="username"
                                         type="text"
-                                        value={newUser.username}
-                                        onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                                        value={isEditUserOpen ? editingUser?.username : newUser.username}
+                                        onChange={(e) => isEditUserOpen ? setEditingUser({...editingUser, username: e.target.value}) : setNewUser({...newUser, username: e.target.value})}
                                         className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none"
                                         placeholder="اسم الدخول"
                                         required
                                     />
                                 </div>
+                                {!isEditUserOpen && (
+                                    <div className="space-y-2">
+                                        <label htmlFor="password" className="text-sm font-medium text-gray-400 block">كلمة المرور</label>
+                                        <input 
+                                            id="password"
+                                            name="password"
+                                            type="password"
+                                            value={newUser.password}
+                                            onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                                            className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none"
+                                            placeholder="••••••••"
+                                            required
+                                        />
+                                    </div>
+                                )}
                                 <div className="space-y-2">
-                                    <label htmlFor="password" className="text-sm font-medium text-gray-400 block">كلمة المرور</label>
+                                    <label htmlFor="slackUserId" className="text-sm font-medium text-gray-400 block">Slack User ID</label>
                                     <input 
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        value={newUser.password}
-                                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                                        className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none"
-                                        placeholder="••••••••"
-                                        required
+                                        id="slackUserId"
+                                        name="slackUserId"
+                                        type="text"
+                                        value={isEditUserOpen ? editingUser?.slackUserId : newUser.slackUserId}
+                                        onChange={(e) => isEditUserOpen ? setEditingUser({...editingUser, slackUserId: e.target.value}) : setNewUser({...newUser, slackUserId: e.target.value})}
+                                        className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none font-mono"
+                                        placeholder="مثال: U123ABC"
                                     />
+                                    <p className="text-[10px] text-gray-500">استخدم الـ User ID الموجود في حساب الموظف على Slack.</p>
                                 </div>
                                 <div>
                                     <label htmlFor="role" className="text-sm font-medium text-gray-400 block mb-1">الصلاحية</label>
                                     <select 
                                         id="role"
                                         name="role"
-                                        value={newUser.role}
-                                        onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                                        value={isEditUserOpen ? editingUser?.role : newUser.role}
+                                        onChange={(e) => isEditUserOpen ? setEditingUser({...editingUser, role: e.target.value}) : setNewUser({...newUser, role: e.target.value})}
                                         className="w-full bg-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
                                         required
                                     >
@@ -253,11 +319,15 @@ const TeamManagement = () => {
                                         type="submit"
                                         className="flex-1 btn-primary justify-center font-bold"
                                     >
-                                        إضافة الحساب
+                                        {isEditUserOpen ? 'حفظ التعديلات' : 'إضافة الحساب'}
                                     </button>
                                     <button 
                                         type="button"
-                                        onClick={() => setIsAddUserOpen(false)}
+                                        onClick={() => {
+                                            setIsAddUserOpen(false);
+                                            setIsEditUserOpen(false);
+                                            setEditingUser(null);
+                                        }}
                                         className="px-6 py-3 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 transition-colors"
                                     >
                                         إلغاء
@@ -278,5 +348,6 @@ const ExternalLinkIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0
 const TrashIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const PauseIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const PlayIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const EditIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
 
 export default TeamManagement;

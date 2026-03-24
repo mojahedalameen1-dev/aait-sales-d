@@ -45,7 +45,7 @@ router.get('/developers', async (req, res) => {
     const result = await db.query(`
       SELECT 
         u.id, u.username, u.full_name as "fullName", u.is_active, u.created_at, u.last_login_at,
-        u.is_admin, u.is_primary_admin,
+        u.is_admin, u.is_primary_admin, u.slack_user_id,
         COUNT(DISTINCT c.id) as client_count,
         COUNT(DISTINCT d.id) as deal_count,
         SUM(COALESCE(d.expected_value, 0)) as total_sales
@@ -55,8 +55,6 @@ router.get('/developers', async (req, res) => {
       GROUP BY u.id
       ORDER BY u.created_at DESC
     `);
-    // Map is_admin to role for frontend compatibility if needed, 
-    // although the frontend should probably just check is_admin
     const rows = result.rows.map(row => ({
       ...row,
       role: row.is_admin ? 'admin' : 'developer'
@@ -70,7 +68,7 @@ router.get('/developers', async (req, res) => {
 
 // Create new user account
 router.post('/developers', async (req, res) => {
-  const { fullName, username, password, role } = req.body;
+  const { fullName, username, password, role, slackUserId } = req.body;
 
   if (!fullName || !username || !password) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -82,8 +80,8 @@ router.post('/developers', async (req, res) => {
     const isAdmin = role === 'admin';
 
     const result = await db.query(
-      'INSERT INTO users (full_name, username, password_hash, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, full_name as "fullName", username, is_admin, is_active, created_at, is_primary_admin',
-      [fullName, username, passwordHash, isAdmin]
+      'INSERT INTO users (full_name, username, password_hash, is_admin, slack_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name as "fullName", username, is_admin, is_active, created_at, is_primary_admin, slack_user_id',
+      [fullName, username, passwordHash, isAdmin, slackUserId || null]
     );
 
     const newUser = {
@@ -101,6 +99,48 @@ router.post('/developers', async (req, res) => {
     }
     console.error('Create developer error:', err);
     res.status(500).json({ error: 'حدث خطأ أثناء إنشاء الحساب' });
+  }
+});
+
+// Update user account
+router.patch('/developers/:id', async (req, res) => {
+  const { fullName, username, role, slackUserId } = req.body;
+  const userId = req.params.id;
+
+  try {
+    // Only Primary Admin can modify other Admins
+    const targetUser = await db.query('SELECT is_admin, is_primary_admin FROM users WHERE id = $1', [userId]);
+    if (!targetUser.rows[0]) return res.status(404).json({ error: 'المستخدم غير موجود' });
+    
+    if (targetUser.rows[0].is_admin && !req.user.isPrimaryAdmin && parseInt(userId) !== req.user.id) {
+      return res.status(403).json({ error: 'فقط المدير الرئيسي يملك صلاحية تعديل حسابات المديرين' });
+    }
+
+    const isAdmin = role === 'admin';
+    
+    const result = await db.query(
+      `UPDATE users 
+       SET full_name = $1, username = $2, is_admin = $3, slack_user_id = $4 
+       WHERE id = $5 
+       RETURNING id, full_name as "fullName", username, is_admin, is_active, is_primary_admin, slack_user_id`,
+      [fullName, username, isAdmin, slackUserId || null, userId]
+    );
+
+    const updatedUser = {
+      ...result.rows[0],
+      role: result.rows[0].is_admin ? 'admin' : 'developer'
+    };
+
+    res.json({
+      success: true,
+      user: updatedUser
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'اسم المستخدم موجود بالفعل' });
+    }
+    console.error('Update developer error:', err);
+    res.status(500).json({ error: 'حدث خطأ أثناء تحديث الحساب' });
   }
 });
 

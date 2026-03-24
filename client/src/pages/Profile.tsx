@@ -4,6 +4,7 @@ import CropperModal from '../components/CropperModal';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../utils/apiConfig';
 import { User, Lock, Camera, Save, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 export default function Profile() {
     const { user, apiFetch, updateUser } = useAuth();
@@ -36,7 +37,7 @@ export default function Profile() {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 10 * 1024 * 1024) return showMsg('error', 'حجم الصورة يجب أن لا يتجاوز 10 ميجابايت');
+            if (file.size > 2 * 1024 * 1024) return showMsg('error', 'حجم الصورة كبير جداً، الحد الأقصى 2 ميجابايت لضمان سرعة الرفع');
             const reader = new FileReader();
             reader.onload = () => {
                 setTempImage(reader.result as string);
@@ -46,12 +47,29 @@ export default function Profile() {
         }
     };
 
-    const handleCropComplete = (blob: Blob) => {
-        setCroppedBlob(blob);
-        setPreviewUrl(URL.createObjectURL(blob));
-        setShowCropper(false);
-        setTempImage(null);
-        setRemoveImage(false); // Reset remove flag if a new image is cropped
+    const handleCropComplete = async (blob: Blob) => {
+        setLoading(true);
+        try {
+            const options = {
+                maxSizeMB: 0.1,
+                maxWidthOrHeight: 500,
+                useWebWorker: true,
+            };
+            // imageCompression works best with File objects, but accepts Blobs as well.
+            // Converting Blob to File to satisfy strict typing and ensure metadata.
+            const imageFile = new File([blob], 'profile.jpg', { type: blob.type });
+            const compressed = await imageCompression(imageFile, options);
+            setCroppedBlob(compressed);
+            setPreviewUrl(URL.createObjectURL(compressed));
+        } catch (error) {
+            console.error('Compression error:', error);
+            showMsg('error', 'فشل معالجة الصورة');
+        } finally {
+            setLoading(false);
+            setShowCropper(false);
+            setTempImage(null);
+            setRemoveImage(false);
+        }
     };
 
     const handleRemoveImage = () => {
@@ -84,6 +102,9 @@ export default function Profile() {
             if (res.ok) {
                 updateUser(data.user);
                 showMsg('success', 'تم تحديث البيانات الشخصية بنجاح');
+                // Clean up memory
+                if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+                setCroppedBlob(null);
             } else {
                 showMsg('error', data.error || 'فشل تحديث البيانات');
             }
@@ -170,12 +191,19 @@ export default function Profile() {
                                 {/* Profile Picture Upload */}
                                 <div className="flex flex-col items-center sm:flex-row sm:items-center gap-10">
                                     <div className="relative group">
-                                        <div className="w-40 h-40 rounded-full p-1 bg-gradient-to-tr from-blue-500 via-cyan-400 to-blue-600 shadow-2xl">
-                                            <div className="w-full h-full rounded-full overflow-hidden border-4 border-white dark:border-slate-900 bg-slate-50 dark:bg-slate-800 relative group">
+                                        <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mx-auto rounded-full p-1 bg-gradient-to-tr from-blue-500 via-cyan-400 to-blue-600 shadow-2xl">
+                                            <div className="w-full h-full rounded-full overflow-hidden border-4 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative group">
                                                 {previewUrl ? (
-                                                    <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                                    <img 
+                                                        src={previewUrl} 
+                                                        alt="Avatar" 
+                                                        className="w-full h-full object-cover rounded-full transition-transform duration-700 group-hover:scale-110" 
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'U')}&background=random&size=128`;
+                                                        }}
+                                                    />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-5xl font-black text-slate-300 dark:text-slate-700 bg-slate-100 dark:bg-slate-800/50">
+                                                    <div className="w-full h-full flex items-center justify-center text-5xl font-black text-slate-300 dark:text-slate-700 bg-slate-100 dark:bg-slate-800/50 rounded-full">
                                                         {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
                                                     </div>
                                                 )}
@@ -222,7 +250,7 @@ export default function Profile() {
                                             ref={fileInputRef} 
                                             onChange={handleImageChange} 
                                             className="hidden" 
-                                            accept="image/*" 
+                                            accept="image/jpeg, image/png, image/webp" 
                                         />
                                     </div>
                                     <div className="flex-1 text-center sm:text-right space-y-2">
@@ -231,8 +259,9 @@ export default function Profile() {
                                             هذه الصورة هي هويتك في النظام، ستظهر لزملائك وفي التقارير الذكية.
                                         </p>
                                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
-                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-bold text-slate-500 tracking-wider">JPG, PNG</span>
-                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-bold text-slate-500 tracking-wider">MAX 10MB</span>
+                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-bold text-slate-500 tracking-wider">JPG, PNG, WEBP</span>
+                                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/10 rounded-full text-[10px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">Optimized</span>
+                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-full text-[10px] font-bold text-slate-500 tracking-wider">MAX 2MB</span>
                                         </div>
                                     </div>
                                 </div>

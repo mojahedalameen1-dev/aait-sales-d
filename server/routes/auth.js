@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
-const uploadMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const uploadMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // Login route
 router.post('/login', async (req, res) => {
@@ -114,12 +114,12 @@ router.put('/profile', authenticateJWT, uploadMemory.single('profileImage'), asy
     if (req.file) {
       // Process with sharp and convert to Base64 for persistent storage in DB (Better for Vercel)
       const buffer = await sharp(req.file.buffer)
-        .resize(400, 400, { fit: 'cover' }) // Slightly smaller for DB efficiency
-        .jpeg({ quality: 75 }) // Good balance of quality and size
+        .resize(200, 200, { fit: 'cover' })
+        .webp({ quality: 70 })
         .toBuffer();
         
       const base64 = buffer.toString('base64');
-      profileImageUrl = `data:image/jpeg;base64,${base64}`;
+      profileImageUrl = `data:image/webp;base64,${base64}`;
       shouldUpdateImage = true;
     } else if (removeImage === 'true' || removeImage === true) {
       profileImageUrl = null;

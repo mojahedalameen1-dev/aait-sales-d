@@ -2,7 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Users, Flame, Clock, PlusCircle, Zap, Presentation, ChevronRight, ChevronLeft, KanbanSquare, FileText, Target
+  LayoutDashboard, Users, Flame, Clock, PlusCircle, Zap, Presentation, ChevronRight, ChevronLeft, KanbanSquare, FileText, Target, Bell
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/', label: 'لوحة التحكم', icon: LayoutDashboard, exact: true },
   { to: '/pipeline', label: 'بورد التقفيل', icon: KanbanSquare },
   { to: '/proposals', label: 'العروض الفنية', icon: FileText },
+  { to: '/slack-mentions', label: 'منشنات Slack', icon: Bell },
   { to: '/global-target', label: 'التارقت العام', icon: Target },
   { to: '/meeting-preps', label: 'تحضير الاجتماعات', icon: Presentation },
 ];

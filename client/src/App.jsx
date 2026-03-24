@@ -23,6 +23,7 @@ const DeveloperDetail = React.lazy(() => import('./pages/DeveloperDetail'));
 const TeamManagement = React.lazy(() => import('./pages/TeamManagement'));
 const AdminSettings = React.lazy(() => import('./pages/AdminSettings'));
 const Profile = React.lazy(() => import('./pages/Profile'));
+const SlackMentionsPage = React.lazy(() => import('./pages/SlackMentionsPage'));
 
 const PageWrapper = ({ children }) => (
   <motion.div
@@ -117,6 +118,7 @@ export default function App() {
                       <Route path="/pipeline" element={<ProtectedRoute><PageWrapper><Pipeline /></PageWrapper></ProtectedRoute>} />
                       <Route path="/proposals" element={<ProtectedRoute><PageWrapper><TechnicalProposals /></PageWrapper></ProtectedRoute>} />
                       <Route path="/global-target" element={<ProtectedRoute><PageWrapper><GlobalTarget /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/slack-mentions" element={<ProtectedRoute><PageWrapper><SlackMentionsPage /></PageWrapper></ProtectedRoute>} />
                       <Route path="/meeting-preps" element={<ProtectedRoute><PageWrapper><MeetingPrepHub /></PageWrapper></ProtectedRoute>} />
                       <Route path="/meeting-preps/:id/print" element={<ProtectedRoute><PrintPrepPage /></ProtectedRoute>} />
                       <Route path="/clients" element={<ProtectedRoute><PageWrapper><ClientsList /></PageWrapper></ProtectedRoute>} />

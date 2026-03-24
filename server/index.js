@@ -16,11 +16,37 @@ if (process.env.NODE_ENV !== 'production') {
 const fs = require('fs');
 
 const app = express();
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
 const PORT = process.env.PORT || 5000;
+
+// Attach IO to app for route access
+app.set('io', io);
 
 console.log('🚀 Server starting initialization...');
 console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`Vercel environment: ${process.env.VERCEL === '1' ? 'Yes' : 'No'}`);
+
+// WebSocket connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 New client connected:', socket.id);
+  
+  // Join user-specific room if token is provided (optional for now, we'll use broadcast or rooms)
+  socket.on('join', (userId) => {
+    socket.join(`user_${userId}`);
+    console.log(`👤 User ${userId} joined room`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔌 Client disconnected');
+  });
+});
 
 // Validate required environment variables
 const requiredEnv = ['DATABASE_URL', 'JWT_SECRET'];
@@ -84,7 +110,7 @@ app.get('/api/health', (req, res) => {
 
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`✅ تطوير الأعمال Server running on http://localhost:${PORT}`);
   });
 }

@@ -503,7 +503,8 @@ export default function GlobalTarget() {
     );
 
     return (
-        <div className="p-4 md:p-7 min-h-screen bg-white dark:bg-[#080E1B] font-['IBM_Plex_Sans_Arabic'] text-slate-900 dark:text-[#F0F4FF] direction-rtl">
+        <div className="min-h-screen bg-white dark:bg-[#080E1B] font-['IBM_Plex_Sans_Arabic'] text-slate-900 dark:text-[#F0F4FF] direction-rtl">
+            <div className="max-w-[1400px] mx-auto p-4 md:p-7">
             {achievementPct >= 100 && <Confetti />}
 
             {selectedRep && (
@@ -722,6 +723,11 @@ export default function GlobalTarget() {
                             <FastestDeals data={allData} isDark={isDark} />
                         </div>
                     </div>
+                    
+                    {/* ── MONTHLY COMPARISON CHART ── */}
+                    <div className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-[28px] p-6 md:p-8 mb-6 shadow-xl shadow-slate-200/50 dark:shadow-black/20 border border-white/20 dark:border-white/5">
+                        <PerformanceProgressChart data={historicData} target={GLOBAL_TARGET} isDark={isDark} />
+                    </div>
 
                     {/* ── ANALYTICS ROW ── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -868,6 +874,7 @@ export default function GlobalTarget() {
                     </div>
                 </motion.div>
             </AnimatePresence>
+            </div>
         </div>
     );
 }

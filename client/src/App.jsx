@@ -105,37 +105,39 @@ export default function App() {
 
             {/* Dynamic Padding Container */}
             <div className={`flex-1 ${isPrint ? 'p-0' : 'p-4 md:p-6 lg:p-8'}`}>
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              }>
-                <AnimatePresence mode="wait">
-                  <Routes location={location} key={location.pathname}>
-                    <Route path="/" element={<ProtectedRoute><PageWrapper><Dashboard /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/pipeline" element={<ProtectedRoute><PageWrapper><Pipeline /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/proposals" element={<ProtectedRoute><PageWrapper><TechnicalProposals /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/global-target" element={<ProtectedRoute><PageWrapper><GlobalTarget /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/meeting-preps" element={<ProtectedRoute><PageWrapper><MeetingPrepHub /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/meeting-preps/:id/print" element={<ProtectedRoute><PrintPrepPage /></ProtectedRoute>} />
-                    <Route path="/clients" element={<ProtectedRoute><PageWrapper><ClientsList /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/hot-clients" element={<ProtectedRoute><PageWrapper><ClientsList filter="hot" /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/follow-ups" element={<ProtectedRoute><PageWrapper><ClientsList filter="followup" /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/clients/new" element={<ProtectedRoute><PageWrapper><AddEditClient /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/clients/:id" element={<ProtectedRoute><PageWrapper><ClientDetail /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/clients/:id/edit" element={<ProtectedRoute><PageWrapper><AddEditClient /></PageWrapper></ProtectedRoute>} />
-                    
-                    {/* Admin Routes */}
-                    <Route path="/admin" element={<ProtectedRoute adminOnly={true}><PageWrapper><AdminDashboard /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/admin/team" element={<ProtectedRoute adminOnly={true}><PageWrapper><TeamManagement /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/admin/settings" element={<ProtectedRoute adminOnly={true}><PageWrapper><AdminSettings /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/admin/developer/:id" element={<ProtectedRoute adminOnly={true}><PageWrapper><DeveloperDetail /></PageWrapper></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
-                    
-                    <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
-                  </Routes>
-                </AnimatePresence>
-              </Suspense>
+              <div className={`${isPrint ? '' : 'max-w-[1600px] mx-auto w-full'}`}>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                }>
+                  <AnimatePresence mode="wait">
+                    <Routes location={location} key={location.pathname}>
+                      <Route path="/" element={<ProtectedRoute><PageWrapper><Dashboard /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/pipeline" element={<ProtectedRoute><PageWrapper><Pipeline /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/proposals" element={<ProtectedRoute><PageWrapper><TechnicalProposals /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/global-target" element={<ProtectedRoute><PageWrapper><GlobalTarget /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/meeting-preps" element={<ProtectedRoute><PageWrapper><MeetingPrepHub /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/meeting-preps/:id/print" element={<ProtectedRoute><PrintPrepPage /></ProtectedRoute>} />
+                      <Route path="/clients" element={<ProtectedRoute><PageWrapper><ClientsList /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/hot-clients" element={<ProtectedRoute><PageWrapper><ClientsList filter="hot" /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/follow-ups" element={<ProtectedRoute><PageWrapper><ClientsList filter="followup" /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/clients/new" element={<ProtectedRoute><PageWrapper><AddEditClient /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/clients/:id" element={<ProtectedRoute><PageWrapper><ClientDetail /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/clients/:id/edit" element={<ProtectedRoute><PageWrapper><AddEditClient /></PageWrapper></ProtectedRoute>} />
+                      
+                      {/* Admin Routes */}
+                      <Route path="/admin" element={<ProtectedRoute adminOnly={true}><PageWrapper><AdminDashboard /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/admin/team" element={<ProtectedRoute adminOnly={true}><PageWrapper><TeamManagement /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/admin/settings" element={<ProtectedRoute adminOnly={true}><PageWrapper><AdminSettings /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/admin/developer/:id" element={<ProtectedRoute adminOnly={true}><PageWrapper><DeveloperDetail /></PageWrapper></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
+                      
+                      <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
+                    </Routes>
+                  </AnimatePresence>
+                </Suspense>
+              </div>
             </div>
           </main>
         </div>

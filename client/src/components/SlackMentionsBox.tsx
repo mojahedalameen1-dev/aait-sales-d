@@ -45,20 +45,42 @@ export default function SlackMentionsBox() {
     }
   }, [apiFetch]);
 
+  const syncMentions = useCallback(async () => {
+    try {
+      await apiFetch(API_URL('/api/slack/sync-mentions'));
+      fetchMentions();
+    } catch (err) {
+      console.error('Auto-sync error:', err);
+    }
+  }, [apiFetch, fetchMentions]);
+
   useEffect(() => {
     fetchMentions();
-  }, [fetchMentions]);
+    // Initial sync
+    syncMentions();
 
-  // Real-time listener
+    // Auto-sync every 30 seconds
+    const interval = setInterval(syncMentions, 30000);
+    return () => clearInterval(interval);
+  }, [fetchMentions, syncMentions]);
+
+  // Real-time listener for socket notifications
   useEffect(() => {
     if (socket) {
       socket.on('new_mention', (newMention: SlackMention) => {
         setMentions(prev => [newMention, ...prev.slice(0, 4)]);
         setUnreadCount(prev => prev + 1);
       });
-      return () => { socket.off('new_mention'); };
+      // Also listen for general sync event
+      socket.on('mentions_synced', () => {
+        fetchMentions();
+      });
+      return () => { 
+        socket.off('new_mention'); 
+        socket.off('mentions_synced');
+      };
     }
-  }, [socket]);
+  }, [socket, fetchMentions]);
 
   const markAsRead = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();

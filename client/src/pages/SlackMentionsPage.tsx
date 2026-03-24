@@ -98,9 +98,32 @@ export default function SlackMentionsPage() {
     }
   }, [apiFetch]);
 
+  const handleSync = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(API_URL('/api/slack/sync-mentions'));
+      if (res.ok) {
+        const data = await res.json();
+        setNotification(`تمت المزامنة: ${data.newMentions} منشن جديد`);
+        fetchMentions(activeFilter);
+        fetchStats();
+      }
+    } catch (err) {
+      console.error('Sync error:', err);
+    } finally {
+      setLoading(false);
+      setTimeout(() => setNotification(null), 5000);
+    }
+  };
+
   useEffect(() => {
     fetchMentions(activeFilter);
     fetchStats();
+    // Auto-sync on page load
+    handleSync();
+
+    const interval = setInterval(handleSync, 60000); // Every 60s for the page
+    return () => clearInterval(interval);
   }, [activeFilter, fetchMentions, fetchStats]);
 
   // Real-time listener
@@ -112,9 +135,16 @@ export default function SlackMentionsPage() {
         fetchStats();
         setTimeout(() => setNotification(null), 5000);
       });
-      return () => { socket.off('new_mention'); };
+      socket.on('mentions_synced', () => {
+        fetchMentions(activeFilter);
+        fetchStats();
+      });
+      return () => { 
+        socket.off('new_mention'); 
+        socket.off('mentions_synced');
+      };
     }
-  }, [socket, fetchStats]);
+  }, [socket, fetchStats, activeFilter, fetchMentions]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -181,12 +211,20 @@ export default function SlackMentionsPage() {
         </div>
         
         <div className="flex items-center gap-2">
+          <button 
+            onClick={handleSync} 
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-xl text-sm font-bold transition-all shadow-lg shadow-purple-500/20"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            مزامنة الآن
+          </button>
           <button onClick={markAllAsRead} className="px-4 py-2 text-slate-500 hover:text-purple-500 text-sm font-bold transition-all">
             تم قراءة الكل
           </button>
           <button onClick={() => { fetchMentions(activeFilter); fetchStats(); }} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-sm font-bold transition-all">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            تحديث
+            تحديث القائمة
           </button>
         </div>
       </div>

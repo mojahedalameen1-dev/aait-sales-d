@@ -13,7 +13,108 @@ const { verifySlackSignature } = require('../helpers/slackVerifier');
 // or I can add a specific raw body parser for this route in index.js.
 // However, Slack events normally come as JSON.
 
+const axios = require('axios');
+
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
+const SLACK_USER_TOKEN = process.env.SLACK_USER_TOKEN;
+const SLACK_CHANNELS = process.env.SLACK_CHANNELS ? process.env.SLACK_CHANNELS.split(',') : [];
+
+/**
+ * GET /api/slack/sync-mentions
+ * Polls Slack for new mentions using a User Token.
+ * This is a "silent" solution that doesn't require inviting a bot.
+ */
+router.get('/sync-mentions', authenticateJWT, async (req, res) => {
+  if (!SLACK_USER_TOKEN || SLACK_CHANNELS.length === 0) {
+    return res.status(400).json({ error: 'SLACK_USER_TOKEN or SLACK_CHANNELS is not configured' });
+  }
+
+  const results = { processedChannels: 0, newMentions: 0, errors: [] };
+
+  try {
+    // Get all users with slack_user_id for mapping
+    const usersRes = await db.query('SELECT id, slack_user_id FROM users WHERE slack_user_id IS NOT NULL');
+    const userMap = usersRes.rows.reduce((acc, u) => {
+      acc[u.slack_user_id] = u.id;
+      return acc;
+    }, {});
+
+    for (const channelId of SLACK_CHANNELS) {
+      try {
+        // 1. Get last processed ts for this channel
+        const syncRes = await db.query('SELECT last_ts FROM slack_sync_status WHERE channel_id = $1', [channelId]);
+        const lastTs = syncRes.rows[0]?.last_ts || '0';
+
+        // 2. Fetch history from Slack
+        const slackRes = await axios.get('https://slack.com/api/conversations.history', {
+          headers: { 'Authorization': `Bearer ${SLACK_USER_TOKEN}` },
+          params: { channel: channelId, oldest: lastTs, limit: 100 }
+        });
+
+        if (!slackRes.data.ok) {
+          throw new Error(`Slack API error for ${channelId}: ${slackRes.data.error}`);
+        }
+
+        const messages = slackRes.data.messages || [];
+        let latestTsInBatch = lastTs;
+
+        for (const msg of messages) {
+          // Keep track of the latest TS to update our pointer
+          if (parseFloat(msg.ts) > parseFloat(latestTsInBatch)) {
+            latestTsInBatch = msg.ts;
+          }
+
+          // Look for mentions <@UXXXX>
+          const mentionMatches = msg.text.match(/<@U[A-Z0-9]+>/g);
+          if (mentionMatches) {
+            for (const match of mentionMatches) {
+              const slackUserId = match.substring(2, match.length - 1);
+              const toUserId = userMap[slackUserId];
+
+              if (toUserId) {
+                try {
+                  // Attempt to insert (unique constraint (message_ts, to_user_id) will prevent duplicates)
+                  await db.query(
+                    `INSERT INTO slack_mentions (slack_event_id, channel_id, thread_ts, message_ts, from_slack_user_id, to_user_id, text)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING`,
+                    [`poll_${msg.ts}`, channelId, msg.thread_ts || null, msg.ts, msg.user, toUserId, msg.text]
+                  );
+                  results.newMentions++;
+                } catch (dbErr) {
+                  // Ignore unique constraint errors
+                }
+              }
+            }
+          }
+        }
+
+        // 3. Update sync status
+        await db.query(
+          `INSERT INTO slack_sync_status (channel_id, last_ts, updated_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (channel_id) DO UPDATE SET last_ts = $2, updated_at = NOW()`,
+          [channelId, latestTsInBatch]
+        );
+
+        results.processedChannels++;
+      } catch (channelErr) {
+        console.error(`Error syncing channel ${channelId}:`, channelErr.message);
+        results.errors.push({ channelId, error: channelErr.message });
+      }
+    }
+
+    // Emit socket event if there are new mentions for anyone
+    if (results.newMentions > 0) {
+      const io = req.app.get('io');
+      if (io) io.emit('mentions_synced', { count: results.newMentions });
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error('Global sync error:', err);
+    res.status(500).json({ error: 'حدث خطأ أثناء مزامنة المنشنات' });
+  }
+});
 
 // GET /api/slack/events - Simple status check
 router.get('/events', (req, res) => {

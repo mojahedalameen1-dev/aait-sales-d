@@ -26,6 +26,10 @@ const SLACK_CHANNELS = process.env.SLACK_CHANNELS ? process.env.SLACK_CHANNELS.s
  */
 router.get('/sync-mentions', authenticateJWT, async (req, res) => {
   if (!SLACK_USER_TOKEN || SLACK_CHANNELS.length === 0) {
+    console.error('Sync error: Missing config', { 
+      hasToken: !!SLACK_USER_TOKEN, 
+      channelsCount: SLACK_CHANNELS.length 
+    });
     return res.status(400).json({ error: 'SLACK_USER_TOKEN or SLACK_CHANNELS is not configured' });
   }
 

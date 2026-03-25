@@ -11,12 +11,10 @@ const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
   let token = null;
 
-  // 1. Check Authorization Header
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
   } 
   
-  // 2. Fallback to Query String (?token=...)
   if (!token && req.query && req.query.token) {
     token = req.query.token;
   }

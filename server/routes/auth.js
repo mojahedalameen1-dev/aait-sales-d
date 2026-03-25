@@ -33,12 +33,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 const uploadMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-// Login route
+
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // Check if it's the environment admin
     const envAdminUser = process.env.ADMIN_USER;
     const envAdminPass = process.env.ADMIN_PASS;
 
@@ -59,7 +58,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check database users
     const result = await db.query('SELECT * FROM users WHERE username = $1 AND is_active = TRUE', [username]);
     const user = result.rows[0];
 
@@ -70,10 +68,8 @@ router.post('/login', async (req, res) => {
         { expiresIn: '24h' }
       );
 
-      // Update last login
       await db.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
       
-      // Log activity
       await logActivity(user.id, 'login', 'سجل الدخول للنظام');
 
       res.json({
@@ -97,12 +93,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user
+
 router.get('/me', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // System Admin (Environment Admin) check
     if (userId === 0) {
       return res.json({ user: req.user });
     }
@@ -131,7 +126,7 @@ router.get('/me', authenticateJWT, async (req, res) => {
   }
 });
 
-// Update profile
+
 router.put('/profile', authenticateJWT, uploadMemory.single('profileImage'), async (req, res) => {
     const { fullName, removeImage } = req.body;
     const userId = req.user.id;
@@ -139,11 +134,10 @@ router.put('/profile', authenticateJWT, uploadMemory.single('profileImage'), asy
     if (userId === 0) return res.status(403).json({ error: 'حساب المشرف العام غير قابل للتعديل' });
   
     try {
-    let profileImageUrl = undefined; // Use undefined to indicate no change by default
+    let profileImageUrl = undefined;
     let shouldUpdateImage = false;
 
     if (req.file) {
-      // Process with sharp and convert to Base64 for persistent storage in DB (Better for Vercel)
       const buffer = await sharp(req.file.buffer)
         .resize(200, 200, { fit: 'cover' })
         .webp({ quality: 70 })
@@ -190,7 +184,7 @@ router.put('/profile', authenticateJWT, uploadMemory.single('profileImage'), asy
   }
 });
 
-// Change password
+
 router.put('/change-password', authenticateJWT, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const userId = req.user.id;

@@ -34,8 +34,6 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
 
   for (const modelName of models) {
     try {
-      console.log(`🤖 Attempting model via DeepSeek API: ${modelName}`);
-
       const url = 'https://api.deepseek.com/chat/completions';
 
       const body = {
@@ -55,8 +53,6 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
       }
 
       const startTime = Date.now();
-      console.log(`🚀 DeepSeek request started | model: ${modelName} | tokens: ${promptText.length} chars`);
-
       const response = await axios.post(url, body, {
         headers: { 
           'Content-Type': 'application/json',
@@ -68,10 +64,6 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
       const text = response.data?.choices?.[0]?.message?.content;
       if (!text) throw new Error('Empty response from DeepSeek API');
 
-      const duration = Date.now() - startTime;
-      console.log(`⏱️ DeepSeek response time: ${duration}ms | output: ${text.length} chars`);
-
-      console.log(`✅ Success with model: ${modelName}`);
       return text;
 
     } catch (error) {
@@ -89,7 +81,6 @@ async function generateWithFallback({ prompt, systemInstruction, responseMimeTyp
         error.message?.includes('Insufficient Balance');
 
       if (isRateLimit) {
-        console.warn(`⚠️ Rate limited or balance issue on ${modelName}, trying next model...`);
         continue;
       }
 

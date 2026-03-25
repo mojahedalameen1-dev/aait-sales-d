@@ -87,54 +87,67 @@ router.post('/', async (req, res) => {
 
   try {
     const userId = req.user.id;
+    const client_db = await db.pool.connect();
 
-    // 1. Create client
-    const clientResult = await db.query(
-      `INSERT INTO clients (user_id, client_name, phone, client_type, city, sector, channel, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [userId, client_name, phone || '', client_type || 'شركة', city || 'الرياض', sector || 'تجارة', channel || 'أخرى', notes || '']
-    );
-    const client = clientResult.rows[0];
-    const clientId = client.id;
+    try {
+      await client_db.query('BEGIN');
 
-    // 2. Create deal
-    await db.query(
-      `INSERT INTO deals (client_id, user_id, deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date, ticket_link, slack_code) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [clientId, userId, deal_name || '', expected_value || 0, payment_percentage != null ? payment_percentage : 0.50, stage || 'جديد', last_contact_date || '', next_followup_date || '', ticket_link || '', slack_code || '']
-    );
+      // 1. Create client
+      const clientResult = await client_db.query(
+        `INSERT INTO clients (user_id, client_name, phone, client_type, city, sector, channel, notes) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        [userId, client_name, phone || '', client_type || 'شركة', city || 'الرياض', sector || 'تجارة', channel || 'أخرى', notes || '']
+      );
+      const client = clientResult.rows[0];
+      const clientId = client.id;
 
-    // 3. Create scores
-    await db.query(
-      `INSERT INTO scores (client_id, budget_score, authority_score, need_score, timeline_score, fit_score) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [clientId, budget_score || 0, authority_score || 0, need_score || 0, timeline_score || 0, fit_score || 0]
-    );
+      // 2. Create deal
+      const finalStage = stage || 'جديد';
+      await client_db.query(
+        `INSERT INTO deals (client_id, user_id, deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date, ticket_link, slack_code) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [clientId, userId, deal_name || '', expected_value || 0, payment_percentage != null ? payment_percentage : 0.50, finalStage, last_contact_date || '', next_followup_date || '', ticket_link || '', slack_code || '']
+      );
 
-    // Log Activity
-    await logActivity(userId, 'add_client', `أضاف عميل جديد: ${client_name}`, 'client', clientId);
+      // 3. Create scores
+      await client_db.query(
+        `INSERT INTO scores (client_id, budget_score, authority_score, need_score, timeline_score, fit_score) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [clientId, budget_score || 0, authority_score || 0, need_score || 0, timeline_score || 0, fit_score || 0]
+      );
 
-    // Return full "joined" object for immediate UI updates
-    const fullClient = {
-      ...client,
-      deal_id: null, // deal doesn't have an ID yet in a single RETURNING * unless we fetch it, but client.id is what matters most
-      deal_name: deal_name || '',
-      expected_value: expected_value || 0,
-      payment_percentage: payment_percentage != null ? payment_percentage : 0.50,
-      stage: stage || 'تفاوض',
-      last_contact_date: last_contact_date || '',
-      next_followup_date: next_followup_date || '',
-      ticket_link: ticket_link || '',
-      slack_code: slack_code || '',
-      budget_score: budget_score || 0,
-      authority_score: authority_score || 0,
-      need_score: need_score || 0,
-      timeline_score: timeline_score || 0,
-      fit_score: fit_score || 0,
-      total_score: (parseInt(budget_score) || 0) + (parseInt(authority_score) || 0) + (parseInt(need_score) || 0) + (parseInt(timeline_score) || 0) + (parseInt(fit_score) || 0)
-    };
+      await client_db.query('COMMIT');
 
-    res.json(fullClient);
+      // Log Activity
+      await logActivity(userId, 'add_client', `أضاف عميل جديد: ${client_name}`, 'client', clientId);
+
+      // Return full "joined" object for immediate UI updates
+      const fullClient = {
+        ...client,
+        deal_id: null,
+        deal_name: deal_name || '',
+        expected_value: expected_value || 0,
+        payment_percentage: payment_percentage != null ? payment_percentage : 0.50,
+        stage: finalStage,
+        last_contact_date: last_contact_date || '',
+        next_followup_date: next_followup_date || '',
+        ticket_link: ticket_link || '',
+        slack_code: slack_code || '',
+        budget_score: budget_score || 0,
+        authority_score: authority_score || 0,
+        need_score: need_score || 0,
+        timeline_score: timeline_score || 0,
+        fit_score: fit_score || 0,
+        total_score: (parseInt(budget_score) || 0) + (parseInt(authority_score) || 0) + (parseInt(need_score) || 0) + (parseInt(timeline_score) || 0) + (parseInt(fit_score) || 0)
+      };
+
+      res.json(fullClient);
+    } catch (err) {
+      await client_db.query('ROLLBACK');
+      throw err;
+    } finally {
+      client_db.release();
+    }
   } catch (err) {
     console.error('Create client error:', err);
     res.status(500).json({ error: 'حدث خطأ أثناء إضافة العميل' });
@@ -142,51 +155,56 @@ router.post('/', async (req, res) => {
 });
 
 // Update client
-router.put('/:id', async (req, res) => {
-  const {
+router.put('/:id', authenticateJWT, async (req, res) => {
+  const { 
     client_name, phone, client_type, city, sector, channel, notes,
-    deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date,
-    budget_score, authority_score, need_score, timeline_score, fit_score
+    deal_name, expected_value, payment_percentage, stage, 
+    last_contact_date, next_followup_date, ticket_link, slack_code,
+    budget_score, authority_score, need_score, timeline_score, fit_score 
   } = req.body;
+  const id = req.params.id;
 
   try {
     const userId = req.user.id;
     const isAdmin = req.user.isAdmin;
+    const client_db = await db.pool.connect();
 
-    // Verify ownership
-    if (!isAdmin) {
-      const check = await db.query('SELECT user_id FROM clients WHERE id = $1', [req.params.id]);
-      if (!check.rows[0] || check.rows[0].user_id !== userId) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
+    try {
+      await client_db.query('BEGIN');
+
+      // 1. Update client
+      await client_db.query(
+        `UPDATE clients SET client_name = $1, phone = $2, client_type = $3, city = $4, sector = $5, channel = $6, notes = $7 
+         WHERE id = $8 AND (user_id = $9 OR EXISTS (SELECT 1 FROM users WHERE id = $9 AND is_admin = true))`,
+        [client_name, phone, client_type, city, sector, channel, notes, id, userId]
+      );
+
+      // 2. Update deal
+      await client_db.query(
+        `UPDATE deals SET deal_name = $1, expected_value = $2, payment_percentage = $3, stage = $4, last_contact_date = $5, next_followup_date = $6, ticket_link = $7, slack_code = $8 
+         WHERE client_id = $9`,
+        [deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date, ticket_link, slack_code, id]
+      );
+
+      // 3. Update scores
+      await client_db.query(
+        `UPDATE scores SET budget_score = $1, authority_score = $2, need_score = $3, timeline_score = $4, fit_score = $5 
+         WHERE client_id = $6`,
+        [budget_score, authority_score, need_score, timeline_score, fit_score, id]
+      );
+
+      await client_db.query('COMMIT');
+
+      // Log Activity
+      await logActivity(userId, 'update_client', `حدّث بيانات العميل: ${client_name}`, 'client', id);
+
+      res.json({ message: 'تم تحديث البيانات بنجاح' });
+    } catch (err) {
+      await client_db.query('ROLLBACK');
+      throw err;
+    } finally {
+      client_db.release();
     }
-
-    // 1. Update client
-    await db.query(
-      `UPDATE clients SET client_name=$1, phone=$2, client_type=$3, city=$4, sector=$5, channel=$6, notes=$7 WHERE id=$8`,
-      [client_name, phone, client_type, city, sector, channel, notes, req.params.id]
-    );
-
-    // 2. Update scores
-    await db.query(
-      `INSERT INTO scores (client_id, budget_score, authority_score, need_score, timeline_score, fit_score) 
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (client_id) DO UPDATE SET 
-         budget_score=EXCLUDED.budget_score, 
-         authority_score=EXCLUDED.authority_score, 
-         need_score=EXCLUDED.need_score, 
-         timeline_score=EXCLUDED.timeline_score, 
-         fit_score=EXCLUDED.fit_score`,
-      [req.params.id, budget_score || 0, authority_score || 0, need_score || 0, timeline_score || 0, fit_score || 0]
-    );
-
-    // 3. Update deals
-    await db.query(
-      `UPDATE deals SET deal_name=$1, expected_value=$2, payment_percentage=$3, stage=$4, last_contact_date=$5, next_followup_date=$6 WHERE client_id=$7`,
-      [deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date, req.params.id]
-    );
-
-    res.json({ success: true });
   } catch (err) {
     console.error('Update client error:', err);
     res.status(500).json({ error: 'حدث خطأ أثناء تحديث بيانات العميل' });
@@ -194,7 +212,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete client
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
     const isAdmin = req.user.isAdmin;

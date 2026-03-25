@@ -67,7 +67,7 @@ router.get('/sync-mentions', authenticateJWT, async (req, res) => {
             latestTsInBatch = msg.ts;
           }
 
-          const mentionMatches = msg.text.match(/<@U[A-Z0-9]+>/g);
+          const mentionMatches = msg.text?.match(/<@U[A-Z0-9]+>/g);
           if (mentionMatches) {
             for (const match of mentionMatches) {
               const slackUserId = match.substring(2, match.length - 1);
@@ -203,7 +203,7 @@ router.post('/events', async (req, res) => {
   // Signature verification
   if (SLACK_SIGNING_SECRET && !verifySlackSignature(SLACK_SIGNING_SECRET, signature, timestamp, rawBody)) {
     console.error('Slack signature verification failed');
-    // We return 200 for now to keep Slack happy during debugging, but log it
+    return res.status(401).json({ error: 'Invalid signature' });
   }
 
   const { type, challenge, event } = req.body;

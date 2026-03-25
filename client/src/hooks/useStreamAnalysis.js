@@ -36,11 +36,12 @@ export function useStreamAnalysis() {
 
         return () => eventSource.close();
       } else {
-        // Use fetch for POST or requests with body
+        const token = localStorage.getItem('token');
         const response = await fetch(endpoint, {
           method,
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
           },
           body: body ? JSON.stringify(body) : null,
         });

@@ -52,13 +52,27 @@ try {
 const PORT = process.env.PORT || 5000;
 
 // Validate required environment variables
-const requiredEnv = ['DATABASE_URL', 'JWT_SECRET'];
+const requiredEnv = ['DATABASE_URL', 'JWT_SECRET', 'ADMIN_USER', 'ADMIN_PASS'];
 const missingEnv = requiredEnv.filter(env => !process.env[env]);
 if (missingEnv.length > 0) {
   console.warn(`⚠️ Warning: Missing environment variables: ${missingEnv.join(', ')}`);
 } else {
   console.log('✅ All required environment variables are present.');
 }
+
+// Rate limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per windowMs for auth
+  message: { error: 'Too many login attempts, please try again after 15 minutes' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // Limit each IP to 100 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware
 app.use(cors());
@@ -70,6 +84,10 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: true }));
+
+// Apply limiters
+app.use('/api/auth/login', authLimiter);
+app.use('/api/', apiLimiter);
 
 // Serve uploaded files
 const isVercel = process.env.VERCEL === '1';
@@ -84,7 +102,8 @@ try {
   console.error(`Failed to create uploads directory: ${err.message}`);
 }
 
-app.use('/uploads', express.static(uploadsDir));
+// app.use('/uploads', express.static(uploadsDir)); 
+// Client uploads are served via authenticated /api/files/download/:fileId route for security
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -98,16 +117,12 @@ app.use('/api/proposals', require('./routes/proposals'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/slack', require('./routes/slack'));
 
-// Health-Check Endpoint (Self-Diagnostic System)
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    isVercel: !!process.env.VERCEL,
-    diagnostics: {
-      neonDbConnected: !!process.env.DATABASE_URL
-    }
+    service: 'Sales Focus API'
   });
 });
 

@@ -4,12 +4,20 @@ const axios = require('axios');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const rateLimit = require('express-rate-limit');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const { authenticateJWT } = require('../middleware/auth');
 
 // Apply auth to all routes
 router.use(authenticateJWT);
+
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each user to 10 AI generations per window
+  message: { error: 'لقد تجاوزت الحد المسموح به لإنشاء العروض، يرجى المحاولة لاحقاً' },
+  keyGenerator: (req) => req.user.id
+});
 
 // Generate DOCX
 router.post('/generate-docx', async (req, res) => {
@@ -92,7 +100,7 @@ router.post('/generate-docx', async (req, res) => {
   }
 });
 
-router.post('/stream', async (req, res) => {
+router.post('/stream', aiRateLimiter, async (req, res) => {
   const { text } = req.body;
   const apiKey = process.env.DEEPSEEK_API_KEY;
 

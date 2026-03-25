@@ -173,11 +173,8 @@ export default function TechnicalProposals() {
       return;
     }
 
-    const streamUrl = new URL(API_URL('/api/proposals/stream'), window.location.origin);
-    if (token) {
-      streamUrl.searchParams.append('token', token);
-    }
-    startStream(streamUrl.toString(), {
+    const streamUrl = API_URL('/api/proposals/stream');
+    startStream(streamUrl, {
       method: 'POST',
       body: { text: formData.meetingNotes }
     });

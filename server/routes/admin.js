@@ -57,7 +57,7 @@ router.get('/developers', async (req, res) => {
     `);
     const rows = result.rows.map(row => ({
       ...row,
-      role: row.is_admin ? 'admin' : 'developer'
+      role: row.role || (row.is_admin ? 'admin' : 'developer')
     }));
     res.json(rows);
   } catch (err) {
@@ -86,7 +86,7 @@ router.post('/developers', async (req, res) => {
 
     const newUser = {
       ...result.rows[0],
-      role: result.rows[0].is_admin ? 'admin' : 'developer'
+      role: role || (result.rows[0].is_admin ? 'admin' : 'developer')
     };
 
     res.json({
@@ -128,7 +128,7 @@ router.patch('/developers/:id', async (req, res) => {
 
     const updatedUser = {
       ...result.rows[0],
-      role: result.rows[0].is_admin ? 'admin' : 'developer'
+      role: role || (result.rows[0].is_admin ? 'admin' : 'developer')
     };
 
     res.json({

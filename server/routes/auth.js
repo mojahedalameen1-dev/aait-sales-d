@@ -39,18 +39,19 @@ router.post('/login', async (req, res) => {
 
   try {
     // Check if it's the environment admin
-    const envAdminUser = process.env.ADMIN_USER || 'admin';
-    const envAdminPass = process.env.ADMIN_PASS || 'admin123';
+    const envAdminUser = process.env.ADMIN_USER;
+    const envAdminPass = process.env.ADMIN_PASS;
 
-    if (username === envAdminUser && password === envAdminPass) {
+    if (!envAdminUser || !envAdminPass) {
+      console.warn('WARNING: ADMIN_USER or ADMIN_PASS environment variables are not set. System Admin login is disabled.');
+    }
+
+    if (envAdminUser && envAdminPass && username === envAdminUser && password === envAdminPass) {
       const token = jwt.sign(
-        { id: 0, username: envAdminUser, isAdmin: true, isPrimaryAdmin: true, fullName: 'System Admin' },
+        { id: 9999, username: 'admin', isAdmin: true, isPrimaryAdmin: true, fullName: 'System Admin', role: 'admin' },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
-      
-      // Update last login (if we want to track system admin, but id 0 doesn't exist in users table)
-      // For system admin, we might just skip table update or handle it differently
       
       return res.json({
         token,

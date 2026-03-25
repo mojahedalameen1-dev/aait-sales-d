@@ -4,10 +4,9 @@ const db = require('../db');
 const { authenticateJWT } = require('../middleware/auth');
 const logActivity = require('../helpers/activityLogger');
 
-// Apply auth to all routes
 router.use(authenticateJWT);
 
-// Get all clients with deal and score info
+
 router.get('/', async (req, res) => {
   try {
     const isAdmin = req.user.isAdmin;
@@ -39,7 +38,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single client
+
 router.get('/:id', async (req, res) => {
   try {
     const isAdmin = req.user.isAdmin;
@@ -74,7 +73,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create client
+
 router.post('/', async (req, res) => {
   const {
     client_name, phone, client_type, city, sector, channel, notes,
@@ -92,7 +91,6 @@ router.post('/', async (req, res) => {
     try {
       await client_db.query('BEGIN');
 
-      // 1. Create client
       const clientResult = await client_db.query(
         `INSERT INTO clients (user_id, client_name, phone, client_type, city, sector, channel, notes) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
@@ -101,7 +99,6 @@ router.post('/', async (req, res) => {
       const client = clientResult.rows[0];
       const clientId = client.id;
 
-      // 2. Create deal
       const finalStage = stage || 'جديد';
       await client_db.query(
         `INSERT INTO deals (client_id, user_id, deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date, ticket_link, slack_code) 
@@ -109,7 +106,6 @@ router.post('/', async (req, res) => {
         [clientId, userId, deal_name || '', expected_value || 0, payment_percentage != null ? payment_percentage : 0.50, finalStage, last_contact_date || '', next_followup_date || '', ticket_link || '', slack_code || '']
       );
 
-      // 3. Create scores
       await client_db.query(
         `INSERT INTO scores (client_id, budget_score, authority_score, need_score, timeline_score, fit_score) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -118,10 +114,9 @@ router.post('/', async (req, res) => {
 
       await client_db.query('COMMIT');
 
-      // Log Activity
+
       await logActivity(userId, 'add_client', `أضاف عميل جديد: ${client_name}`, 'client', clientId);
 
-      // Return full "joined" object for immediate UI updates
       const fullClient = {
         ...client,
         deal_id: null,
@@ -154,7 +149,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update client
+
 router.put('/:id', authenticateJWT, async (req, res) => {
   const { 
     client_name, phone, client_type, city, sector, channel, notes,
@@ -172,21 +167,18 @@ router.put('/:id', authenticateJWT, async (req, res) => {
     try {
       await client_db.query('BEGIN');
 
-      // 1. Update client
       await client_db.query(
         `UPDATE clients SET client_name = $1, phone = $2, client_type = $3, city = $4, sector = $5, channel = $6, notes = $7 
          WHERE id = $8 AND (user_id = $9 OR EXISTS (SELECT 1 FROM users WHERE id = $9 AND is_admin = true))`,
         [client_name, phone, client_type, city, sector, channel, notes, id, userId]
       );
 
-      // 2. Update deal
       await client_db.query(
         `UPDATE deals SET deal_name = $1, expected_value = $2, payment_percentage = $3, stage = $4, last_contact_date = $5, next_followup_date = $6, ticket_link = $7, slack_code = $8 
          WHERE client_id = $9`,
         [deal_name, expected_value, payment_percentage, stage, last_contact_date, next_followup_date, ticket_link, slack_code, id]
       );
 
-      // 3. Update scores
       await client_db.query(
         `UPDATE scores SET budget_score = $1, authority_score = $2, need_score = $3, timeline_score = $4, fit_score = $5 
          WHERE client_id = $6`,
@@ -195,7 +187,6 @@ router.put('/:id', authenticateJWT, async (req, res) => {
 
       await client_db.query('COMMIT');
 
-      // Log Activity
       await logActivity(userId, 'update_client', `حدّث بيانات العميل: ${client_name}`, 'client', id);
 
       res.json({ message: 'تم تحديث البيانات بنجاح' });
@@ -211,7 +202,7 @@ router.put('/:id', authenticateJWT, async (req, res) => {
   }
 });
 
-// Delete client
+
 router.delete('/:id', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -232,7 +223,7 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
   }
 });
 
-// Update deal stage (for Kanban)
+
 router.patch('/:id/stage', async (req, res) => {
   const { stage } = req.body;
   const userId = req.user.id;
@@ -248,7 +239,6 @@ router.patch('/:id/stage', async (req, res) => {
 
     await db.query('UPDATE deals SET stage = $1 WHERE client_id = $2', [stage, req.params.id]);
     
-    // Log Activity
     const clientInfo = await db.query('SELECT client_name FROM clients WHERE id = $1', [req.params.id]);
     await logActivity(userId, 'update_stage', `حدث مرحلة صفقة ${clientInfo.rows[0]?.client_name} إلى: ${stage}`, 'client', req.params.id);
 
